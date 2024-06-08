@@ -1,0 +1,2 @@
+# core
+Acridotheres Core Library
