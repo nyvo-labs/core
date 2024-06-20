@@ -13,12 +13,8 @@ impl<'a> File<'a> {
     pub fn new(path: &'a str) -> Self {
         let mut file = OpenOptions::new().read(true).open(path).unwrap();
         file.rewind().unwrap();
-        
-        Self {
-            path,
-            file,
-            pos: 0,
-        }
+
+        Self { path, file, pos: 0 }
     }
 
     pub fn get_path(&self) -> &str {
