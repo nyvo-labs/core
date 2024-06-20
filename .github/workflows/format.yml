@@ -1,0 +1,25 @@
+name: Automated Code Formatting
+
+on:
+  push:
+    branches:
+      - "*"
+      - "*/*"
+      - "**"
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install cargo fmt
+        run: cargo install --force rustfmt
+      - name: Format code
+        run: cargo fmt --all -- --check
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
