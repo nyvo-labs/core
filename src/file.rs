@@ -42,6 +42,10 @@ impl<'a> File<'a> {
         self.pos
     }
 
+    pub fn get_size(&self) -> u64 {
+        self.file.metadata().unwrap().len()
+    }
+
     pub fn read<'b>(&mut self, buf: &'b mut [u8]) -> &'b mut [u8] {
         let _ = self.file.read_exact(buf);
         self.pos += buf.len() as u64;
