@@ -18,7 +18,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Install cargo fmt
-        run: cargo install --force rustfmt
+        run: cargo install --force rustfmt-nightly
       - name: Format code
         run: cargo fmt
       - name: Create Pull Request
