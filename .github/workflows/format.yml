@@ -20,6 +20,6 @@ jobs:
       - name: Install cargo fmt
         run: cargo install --force rustfmt
       - name: Format code
-        run: cargo fmt --all -- --check
+        run: cargo fmt
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
