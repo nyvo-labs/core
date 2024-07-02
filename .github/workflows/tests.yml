@@ -1,32 +1,58 @@
+# credits: https://github.com/ratatui-org/ratatui/blob/main/.github/workflows/ci.yml
 name: Run integration tests
 on: [push, pull_request]
 env:
-    CARGO_TERM_COLOR: always
+  CARGO_TERM_COLOR: always
 jobs:
-    build:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools
+      - name: Install cargo-llvm-cov and cargo-make
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov,cargo-make
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Generate coverage
+        run: cargo make coverage
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
 
-        runs-on: ubuntu-latest
-
-        steps:
-        - uses: actions/checkout@v3
-        - uses: actions-rs/toolchain@v1
-          with:
-            toolchain: nightly
-            override: true
-        - name: Build
-          run: cargo build --verbose
-        - name: Run tests
-          run: cargo test --verbose
-          env:
-            CARGO_INCREMENTAL: '0'
-            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-            RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-        - name: rust-grcov
-          uses: actions-rs/grcov@v0.1
-        - name: Codecov
-          uses: codecov/codecov-action@v4
-          env:
-            CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          with:
-            verbose: true
-            fail_ci_if_error: true
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        toolchain: ["1.74.0", "stable"]
+        backend: [crossterm, termion, termwiz]
+        exclude:
+          # termion is not supported on windows
+          - os: windows-latest
+            backend: termion
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Rust ${{ matrix.toolchain }}}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+      - name: Install cargo-make
+        uses: taiki-e/install-action@cargo-make
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Test ${{ matrix.backend }}
+        run: cargo make test-backend ${{ matrix.backend }}
+        env:
+          RUST_BACKTRACE: full
