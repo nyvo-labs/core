@@ -1,17 +1,11 @@
-use crate::types::ArchiveMetadata;
-use std::{
-    fs::OpenOptions,
-    io::{Read, Seek},
-};
+use crate::{types::ArchiveMetadata, File};
 
 pub fn metadata(path: &str) -> ArchiveMetadata {
-    let mut file = OpenOptions::new().read(true).open(path).unwrap();
-    file.rewind().unwrap();
-    let mut filecount = [0; 4];
-    let _ = file.read_exact(&mut filecount);
-    let filecount = u32::from_le_bytes(filecount);
+    let mut file = File::new(path);
+    let lfh_signature = file.read_u32le();
+    let filecount = file.read_u128le();
     ArchiveMetadata {
-        lfh_matches: false, // local file header 1 signature matches
+        lfh_matches: lfh_signature == 0x04034b50, // local file header 1 signature matches
         file_count: filecount as u128,
     } // NO! THIS IS NOT A FILE COUNT, THIS IS JUST A VALUE READING TEST
 }
