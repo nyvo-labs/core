@@ -11,6 +11,7 @@ pub fn metadata(path: &str) -> ArchiveMetadata {
     let _ = file.read_exact(&mut filecount);
     let filecount = u32::from_le_bytes(filecount);
     ArchiveMetadata {
+        lfh_matches: false, // local file header 1 signature matches
         file_count: filecount as u128,
     } // NO! THIS IS NOT A FILE COUNT, THIS IS JUST A VALUE READING TEST
 }
