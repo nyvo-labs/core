@@ -54,7 +54,8 @@ impl<'a> File<'a> {
         u8::from_le_bytes(buf)
     }
 
-    pub fn readj_u8(&mut self) -> u8 { // TODO: Apply this to all read methods
+    pub fn readj_u8(&mut self) -> u8 {
+        // TODO: Apply this to all read methods
         let data = self.read_u8();
         self.jump(1);
         data
