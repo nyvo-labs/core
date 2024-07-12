@@ -54,22 +54,10 @@ impl<'a> File<'a> {
         u8::from_le_bytes(buf)
     }
 
-    pub fn readj_u8(&mut self) -> u8 {
-        let data = self.read_u8();
-        self.jump(1);
-        data
-    }
-
     pub fn read_u16le(&mut self) -> u16 {
         let mut buf = [0; 2];
         self.read(&mut buf);
         u16::from_le_bytes(buf)
-    }
-
-    pub fn readj_u16le(&mut self) -> u16 {
-        let data = self.read_u16le();
-        self.jump(2);
-        data
     }
 
     pub fn read_u16be(&mut self) -> u16 {
@@ -78,22 +66,10 @@ impl<'a> File<'a> {
         u16::from_be_bytes(buf)
     }
 
-    pub fn readj_u16be(&mut self) -> u16 {
-        let data = self.read_u16be();
-        self.jump(2);
-        data
-    }
-
     pub fn read_u32le(&mut self) -> u32 {
         let mut buf = [0; 4];
         self.read(&mut buf);
         u32::from_le_bytes(buf)
-    }
-
-    pub fn readj_u32le(&mut self) -> u32 {
-        let data = self.read_u32le();
-        self.jump(4);
-        data
     }
 
     pub fn read_u32be(&mut self) -> u32 {
@@ -102,22 +78,10 @@ impl<'a> File<'a> {
         u32::from_be_bytes(buf)
     }
 
-    pub fn readj_u32be(&mut self) -> u32 {
-        let data = self.read_u32be();
-        self.jump(4);
-        data
-    }
-
     pub fn read_u64le(&mut self) -> u64 {
         let mut buf = [0; 8];
         self.read(&mut buf);
         u64::from_le_bytes(buf)
-    }
-
-    pub fn readj_u64le(&mut self) -> u64 {
-        let data = self.read_u64le();
-        self.jump(8);
-        data
     }
 
     pub fn read_u64be(&mut self) -> u64 {
@@ -126,33 +90,15 @@ impl<'a> File<'a> {
         u64::from_be_bytes(buf)
     }
 
-    pub fn readj_u64be(&mut self) -> u64 {
-        let data = self.read_u64be();
-        self.jump(8);
-        data
-    }
-
     pub fn read_u128le(&mut self) -> u128 {
         let mut buf = [0; 16];
         self.read(&mut buf);
         u128::from_le_bytes(buf)
     }
 
-    pub fn readj_u128le(&mut self) -> u128 {
-        let data = self.read_u128le();
-        self.jump(16);
-        data
-    }
-
     pub fn read_u128be(&mut self) -> u128 {
         let mut buf = [0; 16];
         self.read(&mut buf);
         u128::from_be_bytes(buf)
-    }
-
-    pub fn readj_u128be(&mut self) -> u128 {
-        let data = self.read_u128be();
-        self.jump(16);
-        data
     }
 }
