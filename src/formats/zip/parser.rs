@@ -86,7 +86,7 @@ fn read_local_files(file: &mut File) -> (Vec<ZipFileEntry>, u32) {
         });
         file.jump(size_compressed as i128);
         signature = file.read_u32le();
-    };
+    }
 
     (files, signature)
 }
