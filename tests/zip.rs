@@ -10,7 +10,10 @@ fn metadata_000() {
     assert_eq!(metadata.files[0].file.size, 14);
     assert_eq!(metadata.files[0].compression, "stored");
     assert_eq!(metadata.files[0].uncompressed_size, 14);
-    assert_eq!(metadata.files[0].file.modified.to_rfc3339(), "2024-07-11T18:14:42+00:00");
+    assert_eq!(
+        metadata.files[0].file.modified.to_rfc3339(),
+        "2024-07-11T18:14:42+00:00"
+    );
     //println!("{:#?}", metadata);
 
     let test_txt = corelib::formats::zip::parser::get_file(&mut file, &metadata.files[0]);
@@ -27,12 +30,18 @@ fn metadata_001() {
     assert_eq!(metadata.files[0].file.size, 14);
     assert_eq!(metadata.files[0].compression, "stored");
     assert_eq!(metadata.files[0].uncompressed_size, 14);
-    assert_eq!(metadata.files[0].file.modified.to_rfc3339(), "2024-07-12T18:11:08+00:00");
+    assert_eq!(
+        metadata.files[0].file.modified.to_rfc3339(),
+        "2024-07-12T18:11:08+00:00"
+    );
     assert_eq!(metadata.files[1].file.path, "test2.txt");
     assert_eq!(metadata.files[1].file.size, 16);
     assert_eq!(metadata.files[1].compression, "stored");
     assert_eq!(metadata.files[1].uncompressed_size, 16);
-    assert_eq!(metadata.files[1].file.modified.to_rfc3339(), "2024-07-12T18:11:26+00:00");
+    assert_eq!(
+        metadata.files[1].file.modified.to_rfc3339(),
+        "2024-07-12T18:11:26+00:00"
+    );
 
     let test_txt = corelib::formats::zip::parser::get_file(&mut file, &metadata.files[0]);
     assert_eq!(String::from_utf8(test_txt).unwrap(), "Hello, world!\n");
