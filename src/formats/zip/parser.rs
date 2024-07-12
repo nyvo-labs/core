@@ -23,10 +23,10 @@ pub fn get_file(file: &mut File, entry: &ZipFileEntry) -> Vec<u8> {
     file.read_u8array(entry.uncompressed_size as u64)
 }
 
-pub fn extract_to(file: &mut File, entries: Vec<ZipFileEntry>, buffer_size: u64, path_rewriter: &dyn Fn(&str) -> String) {
+pub fn extract(file: &mut File, entries: Vec<ZipFileEntry>, buffer_size: u64, path_rewriter: &dyn Fn(&str) -> String) {
     for entry in entries {
         let path = path_rewriter(&entry.file.path);
-        file.part_to_file(entry.file.offset, entry.file.size, path.as_str(), entry.file.modified, buffer_size);
+        file.export(entry.file.offset, entry.file.size, path.as_str(), entry.file.modified, buffer_size);
     }
 }
 

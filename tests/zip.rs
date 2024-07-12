@@ -50,7 +50,7 @@ fn metadata_001() {
 
     std::fs::create_dir_all("tests/samples/zip/001").unwrap();
 
-    corelib::formats::zip::parser::extract_to(
+    corelib::formats::zip::parser::extract(
         &mut file,
         metadata.files,
         1024,
