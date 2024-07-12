@@ -48,6 +48,12 @@ impl<'a> File<'a> {
         buf
     }
 
+    pub fn read_utf8(&mut self, len: u64) -> String {
+        let mut buf = vec![0; len as usize];
+        self.read(&mut buf);
+        String::from_utf8(buf).unwrap()
+    }
+
     pub fn read_u8(&mut self) -> u8 {
         let mut buf = [0; 1];
         self.read(&mut buf);
