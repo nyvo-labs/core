@@ -1,7 +1,10 @@
 use std::{
-    fs::OpenOptions,
-    io::{Read, Seek},
+    cmp::min,
+    fs::{OpenOptions, FileTimes},
+    io::{Read, Seek, Write},
 };
+
+use chrono::{DateTime, Utc};
 
 pub struct File<'a> {
     path: &'a str,
@@ -15,6 +18,30 @@ impl<'a> File<'a> {
         file.rewind().unwrap();
 
         Self { path, file, pos: 0 }
+    }
+
+    pub fn part_to_file(&mut self, offset: u64, len: u64, path: &str, modified: DateTime<Utc>, buffer_size: u64) {
+        let mut target = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .unwrap();
+        let pos_before = self.get_position();
+        self.seek(offset);
+        let mut buf = vec![0; buffer_size as usize];
+        let mut remaining = len;
+
+        while remaining > 0 {
+            let to_read = min(buffer_size as u64, remaining) as usize;
+            let read = self.read(&mut buf[..to_read]);
+            target.write_all(read).unwrap();
+            remaining -= to_read as u64;
+        }
+
+        let time = FileTimes::new().set_modified(modified.into());
+        target.set_times(time).unwrap();
+
+        self.seek(pos_before);
     }
 
     pub fn get_path(&self) -> &str {
