@@ -1,5 +1,6 @@
 pub mod file;
 pub mod formats;
+pub mod helpers;
 pub mod types;
 pub use file::File;
 
