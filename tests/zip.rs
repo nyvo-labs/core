@@ -50,17 +50,20 @@ fn metadata_001() {
 
     std::fs::create_dir_all("tests/samples/zip/001").unwrap();
 
-    corelib::formats::zip::parser::extract(
-        &mut file,
-        metadata.files,
-        1024,
-        &|path| format!("tests/samples/zip/001/{}", path),
-    );
+    corelib::formats::zip::parser::extract(&mut file, metadata.files, 1024, &|path| {
+        format!("tests/samples/zip/001/{}", path)
+    });
 
     let extracted_test_txt = std::fs::read("tests/samples/zip/001/test.txt").unwrap();
-    assert_eq!(String::from_utf8(extracted_test_txt).unwrap(), "Hello, world!\n");
+    assert_eq!(
+        String::from_utf8(extracted_test_txt).unwrap(),
+        "Hello, world!\n"
+    );
     let extracted_test2_txt = std::fs::read("tests/samples/zip/001/test2.txt").unwrap();
-    assert_eq!(String::from_utf8(extracted_test2_txt).unwrap(), "Hello, world! 2\n");
+    assert_eq!(
+        String::from_utf8(extracted_test2_txt).unwrap(),
+        "Hello, world! 2\n"
+    );
 
     std::fs::remove_dir_all("tests/samples/zip/001").unwrap();
 }

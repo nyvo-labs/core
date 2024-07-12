@@ -1,6 +1,6 @@
 use std::{
     cmp::min,
-    fs::{OpenOptions, FileTimes},
+    fs::{FileTimes, OpenOptions},
     io::{Read, Seek, Write},
 };
 
@@ -20,7 +20,14 @@ impl<'a> File<'a> {
         Self { path, file, pos: 0 }
     }
 
-    pub fn export(&mut self, offset: u64, len: u64, path: &str, modified: DateTime<Utc>, buffer_size: u64) {
+    pub fn export(
+        &mut self,
+        offset: u64,
+        len: u64,
+        path: &str,
+        modified: DateTime<Utc>,
+        buffer_size: u64,
+    ) {
         let mut target = OpenOptions::new()
             .write(true)
             .create(true)
