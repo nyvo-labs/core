@@ -1,4 +1,4 @@
-use corelib::{self, FileReader};
+use corelib::{self, File, FileReader, FileWriter, ZipArchiveData};
 
 #[test]
 fn sample_000() {
@@ -122,4 +122,48 @@ fn sample_002() {
     );
 
     std::fs::remove_dir_all("tests/samples/zip/002").unwrap();
+}
+
+#[test]
+fn create_000() {
+    let mut output = FileWriter::new("tests/samples/zip/c000.zip", false);
+
+    std::fs::create_dir_all("tests/samples/zip/c000").unwrap();
+    {
+        let mut test_txt = FileWriter::new("tests/samples/zip/c000/test.txt", false);
+        test_txt.write(b"Hello, world!\n");
+        test_txt.close();
+
+        let mut input = FileReader::new("tests/samples/zip/c000/test.txt");
+        corelib::formats::zip::writer::write(
+            &mut output,
+            &mut ZipArchiveData {
+                files: vec![File {
+                    path: "test.txt".to_string(),
+                    offset: 0,
+                    size: input.get_size(),
+                    modified: input.get_times().modified,
+                    is_directory: false,
+                    source: &mut input,
+                }],
+            },
+            1024,
+        );
+    } // that test_txt dies here, that shit caused bugs as fuck
+    output.close();
+
+    let mut file = FileReader::new("tests/samples/zip/c000.zip");
+
+    let metadata = corelib::formats::zip::parser::metadata(&mut file);
+    assert_eq!(metadata.files.len(), 1);
+    assert_eq!(metadata.files[0].file.path, "test.txt");
+    assert_eq!(metadata.files[0].file.size, 14);
+    assert_eq!(metadata.files[0].compression, "stored");
+    assert_eq!(metadata.files[0].uncompressed_size, 14);
+
+    let test_txt = corelib::formats::zip::parser::get_file(&mut file, &metadata.files[0]);
+    assert_eq!(String::from_utf8(test_txt).unwrap(), "Hello, world!\n");
+
+    std::fs::remove_dir_all("tests/samples/zip/c000").unwrap();
+    std::fs::remove_file("tests/samples/zip/c000.zip").unwrap();
 }

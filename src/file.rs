@@ -1,10 +1,17 @@
 use std::{
     cmp::min,
     fs::{FileTimes, OpenOptions},
-    io::{Read, Seek, Write},
+    io::{Read, Seek, Write}, time::SystemTime,
 };
 
 use chrono::{DateTime, Utc};
+
+#[derive(Debug)]
+pub struct Times {
+    pub created: DateTime<Utc>,
+    pub accessed: DateTime<Utc>,
+    pub modified: DateTime<Utc>,
+}
 
 #[derive(Debug)]
 pub struct FileReader<'a> {
@@ -45,6 +52,15 @@ impl<'a> FileReader<'a> {
         target.set_times(time);
 
         self.seek(pos_before);
+    }
+
+    pub fn get_times(&self) -> Times {
+        let metadata = self.file.metadata().unwrap();
+        Times {
+            created: metadata.created().unwrap_or_else(|_| {SystemTime::now()}).into(),
+            accessed: metadata.accessed().unwrap().into(),
+            modified: metadata.modified().unwrap().into(),
+        }
     }
 
     pub fn get_path(&self) -> &str {
@@ -179,6 +195,10 @@ impl<'a> FileWriter<'a> {
         Self { path, file, pos: 0 }
     }
 
+    pub fn close(&mut self) {
+        self.file.sync_all().unwrap();
+    }
+
     pub fn set_times(&self, times: FileTimes) {
         self.file.set_times(times).unwrap();
     }
@@ -219,5 +239,41 @@ impl<'a> FileWriter<'a> {
 
     pub fn write_u8array(&mut self, buf: &Vec<u8>) {
         self.write(buf.as_slice());
+    }
+
+    pub fn write_u8(&mut self, n: u8) {
+        self.write(&n.to_le_bytes());
+    }
+
+    pub fn write_u16le(&mut self, n: u16) {
+        self.write(&n.to_le_bytes());
+    }
+
+    pub fn write_u16be(&mut self, n: u16) {
+        self.write(&n.to_be_bytes());
+    }
+
+    pub fn write_u32le(&mut self, n: u32) {
+        self.write(&n.to_le_bytes());
+    }
+
+    pub fn write_u32be(&mut self, n: u32) {
+        self.write(&n.to_be_bytes());
+    }
+
+    pub fn write_u64le(&mut self, n: u64) {
+        self.write(&n.to_le_bytes());
+    }
+
+    pub fn write_u64be(&mut self, n: u64) {
+        self.write(&n.to_be_bytes());
+    }
+
+    pub fn write_u128le(&mut self, n: u128) {
+        self.write(&n.to_le_bytes());
+    }
+
+    pub fn write_u128be(&mut self, n: u128) {
+        self.write(&n.to_be_bytes());
     }
 }
