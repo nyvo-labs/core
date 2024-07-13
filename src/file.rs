@@ -158,12 +158,25 @@ pub struct FileWriter<'a> {
 impl<'a> FileWriter<'a> {
     pub fn new(path: &'a str, append: bool) -> Self {
         if append {
-            let mut file = OpenOptions::new().write(true).create(true).append(true).open(path).unwrap();
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create(true)
+                .append(true)
+                .open(path)
+                .unwrap();
             file.rewind().unwrap();
-            return Self { path, pos: file.metadata().unwrap().len(), file };
+            return Self {
+                path,
+                pos: file.metadata().unwrap().len(),
+                file,
+            };
         }
 
-        let mut file = OpenOptions::new().write(true).create(true).open(path).unwrap();
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(path)
+            .unwrap();
         file.rewind().unwrap();
 
         Self { path, file, pos: 0 }
