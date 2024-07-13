@@ -1,6 +1,5 @@
 use crate::{
-    helpers::datetime::msdos, ArchiveMetadata, FileEntry, FileReader, ZipArchiveMetadata,
-    ZipFileEntry,
+    helpers::datetime::msdos, ArchiveMetadata, FileEntry, FileReader, FileWriter, ZipArchiveMetadata, ZipFileEntry
 };
 
 pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
@@ -31,10 +30,11 @@ pub fn extract(
     for entry in entries {
         let path = path_rewriter(&entry.file.path);
         if !entry.file.is_directory {
+            let mut target = FileWriter::new(&path, false);
             file.export(
                 entry.file.offset,
                 entry.file.size,
-                path.as_str(),
+                &mut target,
                 entry.file.modified,
                 buffer_size,
             );

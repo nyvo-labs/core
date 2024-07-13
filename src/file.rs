@@ -6,6 +6,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 
+#[derive(Debug)]
 pub struct FileReader<'a> {
     path: &'a str,
     file: std::fs::File,
@@ -24,15 +25,10 @@ impl<'a> FileReader<'a> {
         &mut self,
         offset: u64,
         len: u64,
-        path: &str,
+        target: &mut FileWriter,
         modified: DateTime<Utc>,
         buffer_size: u64,
     ) {
-        let mut target = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(path)
-            .unwrap();
         let pos_before = self.get_position();
         self.seek(offset);
         let mut buf = vec![0; buffer_size as usize];
@@ -41,12 +37,12 @@ impl<'a> FileReader<'a> {
         while remaining > 0 {
             let to_read = min(buffer_size as u64, remaining) as usize;
             let read = self.read(&mut buf[..to_read]);
-            target.write_all(read).unwrap();
+            target.write(read);
             remaining -= to_read as u64;
         }
 
         let time = FileTimes::new().set_modified(modified.into());
-        target.set_times(time).unwrap();
+        target.set_times(time);
 
         self.seek(pos_before);
     }
@@ -149,6 +145,7 @@ impl<'a> FileReader<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct FileWriter<'a> {
     path: &'a str,
     file: std::fs::File,
@@ -180,6 +177,10 @@ impl<'a> FileWriter<'a> {
         file.rewind().unwrap();
 
         Self { path, file, pos: 0 }
+    }
+
+    pub fn set_times (&self, times: FileTimes) {
+        self.file.set_times(times).unwrap();
     }
 
     pub fn get_path(&self) -> &str {
