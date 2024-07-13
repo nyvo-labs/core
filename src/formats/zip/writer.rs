@@ -1,4 +1,4 @@
-use crate::{FileWriter, types::ZipArchiveData, helpers::datetime::msdos};
+use crate::{helpers::datetime::msdos, types::ZipArchiveData, FileWriter};
 
 pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: u64) {
     for file in &mut data.files {
@@ -17,7 +17,7 @@ pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: u6
         let extra_field_length: u16 = 0;
         let name = &file.path;
         let extra: &Vec<u8> = &vec![];
-        
+
         target.write_u16le(version);
         target.write_u16le(bit_flag);
         target.write_u16le(compression_method);
@@ -31,6 +31,7 @@ pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: u6
         target.write_utf8(name);
         target.write_u8array(extra);
 
-        file.source.export(file.offset, file.size, target, file.modified, buffer_size);
+        file.source
+            .export(file.offset, file.size, target, file.modified, buffer_size);
     }
 }

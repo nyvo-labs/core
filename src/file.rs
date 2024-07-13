@@ -1,7 +1,8 @@
 use std::{
     cmp::min,
     fs::{FileTimes, OpenOptions},
-    io::{Read, Seek, Write}, time::SystemTime,
+    io::{Read, Seek, Write},
+    time::SystemTime,
 };
 
 use chrono::{DateTime, Utc};
@@ -57,7 +58,10 @@ impl<'a> FileReader<'a> {
     pub fn get_times(&self) -> Times {
         let metadata = self.file.metadata().unwrap();
         Times {
-            created: metadata.created().unwrap_or_else(|_| {SystemTime::now()}).into(),
+            created: metadata
+                .created()
+                .unwrap_or_else(|_| SystemTime::now())
+                .into(),
             accessed: metadata.accessed().unwrap().into(),
             modified: metadata.modified().unwrap().into(),
         }
