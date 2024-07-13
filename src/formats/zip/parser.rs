@@ -4,7 +4,7 @@ use crate::{
     File,
 };
 
-pub fn metadata(file: &mut File) -> ZipArchiveMetadata {
+pub fn metadata<'a>(file: &mut File) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
 
     let signature = local_files.1;
@@ -31,17 +31,21 @@ pub fn extract(
 ) {
     for entry in entries {
         let path = path_rewriter(&entry.file.path);
-        file.export(
-            entry.file.offset,
-            entry.file.size,
-            path.as_str(),
-            entry.file.modified,
-            buffer_size,
-        );
+        if !entry.file.is_directory {
+            file.export(
+                entry.file.offset,
+                entry.file.size,
+                path.as_str(),
+                entry.file.modified,
+                buffer_size,
+            );
+        } else {
+            std::fs::create_dir_all(path).unwrap();
+        };
     }
 }
 
-fn read_local_files(file: &mut File) -> (Vec<ZipFileEntry>, u32) {
+fn read_local_files<'a>(file: &mut File) -> (Vec<ZipFileEntry<'a>>, u32) {
     let mut files: Vec<ZipFileEntry> = Vec::new();
 
     let mut signature: u32 = file.read_u32le();
@@ -90,10 +94,11 @@ fn read_local_files(file: &mut File) -> (Vec<ZipFileEntry>, u32) {
         let extra = file.read_u8array(extra_length as u64);
         files.push(ZipFileEntry {
             file: FileEntry {
-                path: name,
                 offset: file.get_position(),
                 size: size_compressed as u64,
                 modified: msdos::parse(lastmod_date, lastmod_time),
+                is_directory: name.ends_with('/'),
+                path: name,
             },
             version,
             bit_flag,
