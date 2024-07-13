@@ -7,11 +7,11 @@ use crate::{
 pub fn metadata<'a>(file: &mut File) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
 
-    let signature = local_files.1;
+    //let signature = local_files.1;
 
-    if signature == 0x02014b50 {}
+    //if signature == 0x02014b50 {}
 
-    println!("0x{:x}", signature);
+    //println!("0x{:x}", signature);
     ZipArchiveMetadata {
         archive: ArchiveMetadata { format: "zip" },
         files: local_files.0,
