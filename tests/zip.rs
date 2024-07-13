@@ -1,8 +1,8 @@
-use corelib::{self, File};
+use corelib::{self, FileReader};
 
 #[test]
 fn sample_000() {
-    let mut file = File::new("tests/samples/zip/000.zip");
+    let mut file = FileReader::new("tests/samples/zip/000.zip");
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 1);
@@ -22,7 +22,7 @@ fn sample_000() {
 
 #[test]
 fn sample_001() {
-    let mut file = File::new("tests/samples/zip/001.zip");
+    let mut file = FileReader::new("tests/samples/zip/001.zip");
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 2);
@@ -70,7 +70,7 @@ fn sample_001() {
 
 #[test]
 fn sample_002() {
-    let mut file = File::new("tests/samples/zip/002.zip");
+    let mut file = FileReader::new("tests/samples/zip/002.zip");
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 3);

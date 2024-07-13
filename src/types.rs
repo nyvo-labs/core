@@ -30,3 +30,6 @@ pub struct ZipFileEntry<'a> {
     pub bit_flag: u16,
     pub compression: &'a str,
 }
+
+#[derive(Debug)]
+pub struct ZipArchiveData {}

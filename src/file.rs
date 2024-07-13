@@ -6,13 +6,13 @@ use std::{
 
 use chrono::{DateTime, Utc};
 
-pub struct File<'a> {
+pub struct FileReader<'a> {
     path: &'a str,
     file: std::fs::File,
     pos: u64,
 }
 
-impl<'a> File<'a> {
+impl<'a> FileReader<'a> {
     pub fn new(path: &'a str) -> Self {
         let mut file = OpenOptions::new().read(true).open(path).unwrap();
         file.rewind().unwrap();
@@ -146,5 +146,64 @@ impl<'a> File<'a> {
         let mut buf = [0; 16];
         self.read(&mut buf);
         u128::from_be_bytes(buf)
+    }
+}
+
+pub struct FileWriter<'a> {
+    path: &'a str,
+    file: std::fs::File,
+    pos: u64,
+}
+
+impl<'a> FileWriter<'a> {
+    pub fn new(path: &'a str, append: bool) -> Self {
+        if append {
+            let mut file = OpenOptions::new().write(true).create(true).append(true).open(path).unwrap();
+            file.rewind().unwrap();
+            return Self { path, pos: file.metadata().unwrap().len(), file };
+        }
+
+        let mut file = OpenOptions::new().write(true).create(true).open(path).unwrap();
+        file.rewind().unwrap();
+
+        Self { path, file, pos: 0 }
+    }
+
+    pub fn get_path(&self) -> &str {
+        self.path
+    }
+
+    pub fn seek(&mut self, pos: u64) {
+        self.file.seek(std::io::SeekFrom::Start(pos)).unwrap();
+        self.pos = pos;
+    }
+
+    pub fn rewind(&mut self) {
+        self.seek(0);
+    }
+
+    pub fn jump(&mut self, offset: i128) {
+        self.seek((self.pos as i128 + offset) as u64);
+    }
+
+    pub fn get_position(&self) -> u64 {
+        self.pos
+    }
+
+    pub fn get_size(&self) -> u64 {
+        self.file.metadata().unwrap().len()
+    }
+
+    pub fn write(&mut self, buf: &[u8]) {
+        self.file.write_all(buf).unwrap();
+        self.pos += buf.len() as u64;
+    }
+
+    pub fn write_utf8(&mut self, s: &str) {
+        self.write(s.as_bytes());
+    }
+
+    pub fn write_u8array(&mut self, buf: &Vec<u8>) {
+        self.write(buf.as_slice());
     }
 }

@@ -1,10 +1,9 @@
 use crate::{
-    helpers::datetime::msdos,
-    types::{ArchiveMetadata, FileEntry, ZipArchiveMetadata, ZipFileEntry},
-    File,
+    helpers::datetime::msdos, ArchiveMetadata, FileEntry, FileReader, ZipArchiveMetadata,
+    ZipFileEntry,
 };
 
-pub fn metadata<'a>(file: &mut File) -> ZipArchiveMetadata<'a> {
+pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
 
     //let signature = local_files.1;
@@ -18,13 +17,13 @@ pub fn metadata<'a>(file: &mut File) -> ZipArchiveMetadata<'a> {
     }
 }
 
-pub fn get_file(file: &mut File, entry: &ZipFileEntry) -> Vec<u8> {
+pub fn get_file(file: &mut FileReader, entry: &ZipFileEntry) -> Vec<u8> {
     file.seek(entry.file.offset);
     file.read_u8array(entry.uncompressed_size as u64)
 }
 
 pub fn extract(
-    file: &mut File,
+    file: &mut FileReader,
     entries: Vec<ZipFileEntry>,
     buffer_size: u64,
     path_rewriter: &dyn Fn(&str) -> String,
@@ -45,7 +44,7 @@ pub fn extract(
     }
 }
 
-fn read_local_files<'a>(file: &mut File) -> (Vec<ZipFileEntry<'a>>, u32) {
+fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
     let mut files: Vec<ZipFileEntry> = Vec::new();
 
     let mut signature: u32 = file.read_u32le();
