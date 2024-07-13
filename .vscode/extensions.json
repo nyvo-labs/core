@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "github.vscode-github-actions",
+        "ms-vscode.hexeditor",
+        "wakatime.vscode-wakatime",
+        "github.vscode-pull-request-github",
+        "serayuzgur.crates",
+        "tamasfe.even-better-toml",
+        "github.remotehub",
+        "1yib.rust-bundle",
+        "dustypomerleau.rust-syntax",
+        "rust-lang.rust-analyzer"
+    ]
+}
