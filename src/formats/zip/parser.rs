@@ -1,5 +1,6 @@
 use crate::{
-    helpers::datetime::msdos, ArchiveMetadata, FileEntry, FileReader, FileWriter, ZipArchiveMetadata, ZipFileEntry
+    helpers::datetime::msdos, ArchiveMetadata, FileEntry, FileReader, FileWriter,
+    ZipArchiveMetadata, ZipFileEntry,
 };
 
 pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {

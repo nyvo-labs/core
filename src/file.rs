@@ -179,7 +179,7 @@ impl<'a> FileWriter<'a> {
         Self { path, file, pos: 0 }
     }
 
-    pub fn set_times (&self, times: FileTimes) {
+    pub fn set_times(&self, times: FileTimes) {
         self.file.set_times(times).unwrap();
     }
 
