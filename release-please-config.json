@@ -1,7 +1,0 @@
-{
-    "handleGHRelease": true,
-    "manifest": true,
-    "packages": {
-        ".": {}
-    }
-}
