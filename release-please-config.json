@@ -1,5 +1,4 @@
 {
-    "release-type": "cargo",
     "handleGHRelease": true,
     "manifest": true,
     "packages": {
