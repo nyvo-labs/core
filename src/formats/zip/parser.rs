@@ -1,16 +1,120 @@
-use crate::types::ArchiveMetadata;
-use std::{
-    fs::OpenOptions,
-    io::{Read, Seek},
+use crate::{
+    helpers::{datetime::msdos, hash::crc32},
+    ArchiveMetadata, FileEntry, FileReader, FileWriter, ZipArchiveMetadata, ZipFileEntry,
 };
 
-pub fn metadata(path: &str) -> ArchiveMetadata {
-    let mut file = OpenOptions::new().read(true).open(path).unwrap();
-    file.rewind().unwrap();
-    let mut filecount = [0; 4];
-    let _ = file.read_exact(&mut filecount);
-    let filecount = u32::from_le_bytes(filecount);
-    ArchiveMetadata {
-        file_count: filecount as u128,
-    } // NO! THIS IS NOT A FILE COUNT, THIS IS JUST A VALUE READING TEST
+pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
+    let local_files = read_local_files(file);
+
+    //let signature = local_files.1;
+
+    //if signature == 0x02014b50 {}
+
+    //println!("0x{:x}", signature);
+    ZipArchiveMetadata {
+        archive: ArchiveMetadata { format: "zip" },
+        files: local_files.0,
+    }
+}
+
+pub fn get_file(file: &mut FileReader, entry: &ZipFileEntry) -> Vec<u8> {
+    file.seek(entry.file.offset);
+    file.read_u8array(entry.uncompressed_size as u64)
+}
+
+pub fn extract(
+    file: &mut FileReader,
+    entries: &Vec<ZipFileEntry>,
+    buffer_size: u64,
+    path_rewriter: &dyn Fn(&str) -> String,
+) {
+    for entry in entries {
+        let path = path_rewriter(&entry.file.path);
+        if !entry.file.is_directory {
+            let mut target = FileWriter::new(&path, false);
+            file.export(
+                entry.file.offset,
+                entry.file.size,
+                &mut target,
+                entry.file.modified,
+                buffer_size,
+            );
+        } else {
+            std::fs::create_dir_all(path).unwrap();
+        };
+    }
+}
+
+fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
+    let mut files: Vec<ZipFileEntry> = Vec::new();
+
+    let mut signature: u32 = file.read_u32le();
+    while signature == 0x04034b50 {
+        let version = file.read_u16le();
+        let bit_flag = file.read_u16le();
+        let compression_method = match file.read_u16le() {
+            0 => "stored",      // The file is stored (no compression)
+            1 => "shrunk",      // The file is Shrunk
+            2 => "reduced1",    // The file is Reduced with compression factor 1
+            3 => "reduced2",    // The file is Reduced with compression factor 2
+            4 => "reduced3",    // The file is Reduced with compression factor 3
+            5 => "reduced4",    // The file is Reduced with compression factor 4
+            6 => "imploded",    // The file is Imploded
+            7 => "tokenizing",  // Reserved for Tokenizing compression algorithm
+            8 => "deflated",    // The file is Deflated
+            9 => "deflated64",  // Enhanced Deflating using Deflate64(tm)
+            10 => "dcli",       // PKWARE Data Compression Library Imploding (old IBM TERSE)
+            11 => "reserved",   // Reserved by PKWARE
+            12 => "bzip2",      // File is compressed using BZIP2 algorithm
+            13 => "reserved2",  // Reserved by PKWARE
+            14 => "lzma",       // LZMA
+            15 => "reserved3",  // Reserved by PKWARE
+            16 => "cmpsc",      // IBM z/OS CMPSC Compression
+            17 => "reserved4",  // Reserved by PKWARE
+            18 => "terse",      // IBM TERSE (new)
+            19 => "lz77",       // IBM LZ77 z Architecture (PFS)
+            20 => "deprecated", // deprecated (use method 93 for zstd)
+            93 => "zstd",       // Zstandard
+            94 => "mp3",        // MP3 Compression
+            95 => "xz",         // XZ Compression
+            96 => "jpeg",       // JPEG variant
+            97 => "wavpack",    // WavPack compressed data
+            98 => "ppmd",       // PPMd version I, Rev 1
+            99 => "aes",        // AE-x encryption (see APPENDIX E)
+            _ => "unknown",
+        };
+        let lastmod_time = file.read_u16le();
+        let lastmod_date = file.read_u16le();
+        let crc32 = file.read_u32le();
+        let size_compressed = file.read_u32le();
+        let size_uncompressed = file.read_u32le();
+        let name_length = file.read_u16le();
+        let extra_length = file.read_u16le();
+        let name = file.read_utf8(name_length as u64);
+        let extra = file.read_u8array(extra_length as u64);
+        files.push(ZipFileEntry {
+            file: FileEntry {
+                offset: file.get_position(),
+                size: size_compressed as u64,
+                modified: msdos::parse(lastmod_date, lastmod_time),
+                is_directory: name.ends_with('/'),
+                path: name,
+            },
+            version,
+            bit_flag,
+            compression: compression_method,
+            uncompressed_size: size_uncompressed,
+            checksum: crc32,
+            extra_field: extra,
+        });
+        file.jump(size_compressed as i128);
+        signature = file.read_u32le();
+    }
+
+    (files, signature)
+}
+
+pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size: u64) -> bool {
+    let hash = crc32::hash(source, file.file.offset, file.file.size, buffer_size);
+    hash == file.checksum
 }

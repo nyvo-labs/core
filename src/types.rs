@@ -1,3 +1,55 @@
-pub struct ArchiveMetadata {
-    pub file_count: u128,
+use chrono::{DateTime, Utc};
+
+use crate::FileReader;
+
+#[derive(Debug)]
+pub struct ArchiveMetadata<'a> {
+    pub format: &'a str,
+}
+
+#[derive(Debug)]
+pub struct ZipArchiveMetadata<'a> {
+    pub archive: ArchiveMetadata<'a>,
+    pub files: Vec<ZipFileEntry<'a>>,
+}
+
+#[derive(Debug)]
+pub struct FileEntry {
+    pub path: String,
+    pub offset: u64,
+    pub size: u64,
+    pub modified: DateTime<Utc>,
+    pub is_directory: bool,
+}
+
+#[derive(Debug)]
+pub struct ZipFileEntry<'a> {
+    pub file: FileEntry,
+    pub uncompressed_size: u32,
+    pub checksum: u32,
+    pub extra_field: Vec<u8>,
+    pub version: u16,
+    pub bit_flag: u16,
+    pub compression: &'a str,
+}
+
+#[derive(Debug)]
+pub struct File<'a> {
+    pub path: String,
+    pub offset: u64,
+    pub size: u64,
+    pub modified: DateTime<Utc>,
+    pub is_directory: bool,
+    pub source: &'a mut FileReader<'a>,
+}
+
+#[derive(Debug)]
+pub struct ZipFile<'a> {
+    pub file: File<'a>,
+    pub checksum: u32,
+}
+
+#[derive(Debug)]
+pub struct ZipArchiveData<'a> {
+    pub files: Vec<ZipFile<'a>>,
 }
