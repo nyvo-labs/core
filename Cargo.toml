@@ -11,3 +11,4 @@ path = 'src/lib.rs'
 
 [dependencies]
 chrono = "0.4.38"
+crc32fast = "1.4.2"

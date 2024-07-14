@@ -1,5 +1,5 @@
 use crate::{
-    helpers::datetime::msdos, ArchiveMetadata, FileEntry, FileReader, FileWriter,
+    helpers::{datetime::msdos, hash::crc32}, ArchiveMetadata, FileEntry, FileReader, FileWriter,
     ZipArchiveMetadata, ZipFileEntry,
 };
 
@@ -24,7 +24,7 @@ pub fn get_file(file: &mut FileReader, entry: &ZipFileEntry) -> Vec<u8> {
 
 pub fn extract(
     file: &mut FileReader,
-    entries: Vec<ZipFileEntry>,
+    entries: &Vec<ZipFileEntry>,
     buffer_size: u64,
     path_rewriter: &dyn Fn(&str) -> String,
 ) {
@@ -112,4 +112,9 @@ fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
     }
 
     (files, signature)
+}
+
+pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size: u64) -> bool {
+    let hash = crc32::hash(source, file.file.offset, file.file.size, buffer_size);
+    hash == file.checksum
 }

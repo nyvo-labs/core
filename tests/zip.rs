@@ -1,4 +1,4 @@
-use corelib::{self, File, FileReader, FileWriter, ZipArchiveData};
+use corelib::{self, helpers::hash::crc32, File, FileReader, FileWriter, ZipArchiveData, ZipFile};
 
 #[test]
 fn sample_000() {
@@ -18,6 +18,8 @@ fn sample_000() {
 
     let test_txt = corelib::formats::zip::parser::get_file(&mut file, &metadata.files[0]);
     assert_eq!(String::from_utf8(test_txt).unwrap(), "Hello, world!\n");
+
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
 }
 
 #[test]
@@ -50,7 +52,7 @@ fn sample_001() {
 
     std::fs::create_dir_all("tests/samples/zip/001").unwrap();
 
-    corelib::formats::zip::parser::extract(&mut file, metadata.files, 1024, &|path| {
+    corelib::formats::zip::parser::extract(&mut file, &metadata.files, 1024, &|path| {
         format!("tests/samples/zip/001/{}", path)
     });
 
@@ -66,6 +68,9 @@ fn sample_001() {
     );
 
     std::fs::remove_dir_all("tests/samples/zip/001").unwrap();
+
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[1], 1024));
 }
 
 #[test]
@@ -106,7 +111,7 @@ fn sample_002() {
 
     std::fs::create_dir_all("tests/samples/zip/002").unwrap();
 
-    corelib::formats::zip::parser::extract(&mut file, metadata.files, 1024, &|path| {
+    corelib::formats::zip::parser::extract(&mut file, &metadata.files, 1024, &|path| {
         format!("tests/samples/zip/002/{}", path)
     });
 
@@ -122,6 +127,10 @@ fn sample_002() {
     );
 
     std::fs::remove_dir_all("tests/samples/zip/002").unwrap();
+
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[1], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[2], 1024));
 }
 
 #[test]
@@ -135,16 +144,20 @@ fn create_000() {
         test_txt.close();
 
         let mut input = FileReader::new("tests/samples/zip/c000/test.txt");
+        let size = input.get_size();
         corelib::formats::zip::writer::write(
             &mut output,
             &mut ZipArchiveData {
-                files: vec![File {
-                    path: "test.txt".to_string(),
-                    offset: 0,
-                    size: input.get_size(),
-                    modified: input.get_times().modified,
-                    is_directory: false,
-                    source: &mut input,
+                files: vec![ZipFile {
+                    checksum: crc32::hash(&mut input, 0, size, 1024),
+                    file: File {
+                        path: "test.txt".to_string(),
+                        offset: 0,
+                        size,
+                        modified: input.get_times().modified,
+                        is_directory: false,
+                        source: &mut input,
+                    },
                 }],
             },
             1024,
@@ -165,5 +178,8 @@ fn create_000() {
     assert_eq!(String::from_utf8(test_txt).unwrap(), "Hello, world!\n");
 
     std::fs::remove_dir_all("tests/samples/zip/c000").unwrap();
+
+    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
+
     std::fs::remove_file("tests/samples/zip/c000.zip").unwrap();
 }

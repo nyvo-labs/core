@@ -44,6 +44,12 @@ pub struct File<'a> {
 }
 
 #[derive(Debug)]
+pub struct ZipFile<'a> {
+    pub file: File<'a>,
+    pub checksum: u32,
+}
+
+#[derive(Debug)]
 pub struct ZipArchiveData<'a> {
-    pub files: Vec<File<'a>>,
+    pub files: Vec<ZipFile<'a>>,
 }
