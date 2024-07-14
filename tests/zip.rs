@@ -19,7 +19,11 @@ fn sample_000() {
     let test_txt = corelib::formats::zip::parser::get_file(&mut file, &metadata.files[0]);
     assert_eq!(String::from_utf8(test_txt).unwrap(), "Hello, world!\n");
 
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[0],
+        1024
+    ));
 }
 
 #[test]
@@ -69,8 +73,16 @@ fn sample_001() {
 
     std::fs::remove_dir_all("tests/samples/zip/001").unwrap();
 
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[1], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[0],
+        1024
+    ));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[1],
+        1024
+    ));
 }
 
 #[test]
@@ -128,9 +140,21 @@ fn sample_002() {
 
     std::fs::remove_dir_all("tests/samples/zip/002").unwrap();
 
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[1], 1024));
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[2], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[0],
+        1024
+    ));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[1],
+        1024
+    ));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[2],
+        1024
+    ));
 }
 
 #[test]
@@ -179,7 +203,11 @@ fn create_000() {
 
     std::fs::remove_dir_all("tests/samples/zip/c000").unwrap();
 
-    assert!(corelib::formats::zip::parser::check_integrity(&mut file, &metadata.files[0], 1024));
+    assert!(corelib::formats::zip::parser::check_integrity(
+        &mut file,
+        &metadata.files[0],
+        1024
+    ));
 
     std::fs::remove_file("tests/samples/zip/c000.zip").unwrap();
 }

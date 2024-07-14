@@ -31,7 +31,12 @@ pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: u6
         target.write_utf8(name);
         target.write_u8array(extra);
 
-        file.file.source
-            .export(file.file.offset, file.file.size, target, file.file.modified, buffer_size);
+        file.file.source.export(
+            file.file.offset,
+            file.file.size,
+            target,
+            file.file.modified,
+            buffer_size,
+        );
     }
 }
