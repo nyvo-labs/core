@@ -2,7 +2,7 @@ use std::{
     cmp::min,
     fs::{FileTimes, OpenOptions},
     io::{Read, Seek, Write},
-    mem::drop
+    mem::drop,
 };
 
 use chrono::{DateTime, Utc};
@@ -26,7 +26,11 @@ impl<'a> FileReader {
         let mut file = OpenOptions::new().read(true).open(path).unwrap();
         file.rewind().unwrap();
 
-        Self { path: path.to_owned(), file, pos: 0 }
+        Self {
+            path: path.to_owned(),
+            file,
+            pos: 0,
+        }
     }
 
     pub fn close(self) {
@@ -201,7 +205,11 @@ impl<'a> FileWriter {
             .unwrap();
         file.rewind().unwrap();
 
-        Self { path: path.to_owned(), file, pos: 0 }
+        Self {
+            path: path.to_owned(),
+            file,
+            pos: 0,
+        }
     }
 
     pub fn close(self) {
