@@ -18,25 +18,25 @@ pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
 }
 
 pub fn get_file(file: &mut FileReader, entry: &ZipFileEntry) -> Vec<u8> {
-    file.seek(entry.file.offset);
-    file.read_u8array(entry.uncompressed_size as u64)
+    file.seek(&entry.file.offset);
+    file.read_u8array(&(entry.uncompressed_size as u64))
 }
 
 pub fn extract(
     file: &mut FileReader,
     entries: &Vec<ZipFileEntry>,
-    buffer_size: u64,
+    buffer_size: &u64,
     path_rewriter: &dyn Fn(&str) -> String,
 ) {
     for entry in entries {
         let path = path_rewriter(&entry.file.path);
         if !entry.file.is_directory {
-            let mut target = FileWriter::new(&path, false);
+            let mut target = FileWriter::new(&path, &false);
             file.export(
-                entry.file.offset,
-                entry.file.size,
+                &entry.file.offset,
+                &entry.file.size,
                 &mut target,
-                entry.file.modified,
+                &entry.file.modified.into(),
                 buffer_size,
             );
         } else {
@@ -86,17 +86,17 @@ fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
         let lastmod_time = file.read_u16le();
         let lastmod_date = file.read_u16le();
         let crc32 = file.read_u32le();
-        let size_compressed = file.read_u32le();
+        let size_compressed = file.read_u32le() as i128;
         let size_uncompressed = file.read_u32le();
-        let name_length = file.read_u16le();
-        let extra_length = file.read_u16le();
-        let name = file.read_utf8(name_length as u64);
-        let extra = file.read_u8array(extra_length as u64);
+        let name_length = file.read_u16le() as u64;
+        let extra_length = file.read_u16le() as u64;
+        let name = file.read_utf8(&name_length);
+        let extra = file.read_u8array(&extra_length);
         files.push(ZipFileEntry {
             file: FileEntry {
                 offset: file.get_position(),
                 size: size_compressed as u64,
-                modified: msdos::parse(lastmod_date, lastmod_time),
+                modified: msdos::parse(&lastmod_date, &lastmod_time).into(),
                 is_directory: name.ends_with('/'),
                 path: name,
             },
@@ -107,14 +107,14 @@ fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
             checksum: crc32,
             extra_field: extra,
         });
-        file.jump(size_compressed as i128);
+        file.jump(&size_compressed);
         signature = file.read_u32le();
     }
 
     (files, signature)
 }
 
-pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size: u64) -> bool {
-    let hash = crc32::hash(source, file.file.offset, file.file.size, buffer_size);
+pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size: &u64) -> bool {
+    let hash = crc32::hash(source, &file.file.offset, &file.file.size, buffer_size);
     hash == file.checksum
 }

@@ -1,8 +1,8 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local};
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-dosdatetimetofiletime
 
-pub fn parse(date: u16, time: u16) -> DateTime<Utc> {
+pub fn parse(date: &u16, time: &u16) -> DateTime<Local> {
     let y = (date >> 9) + 1980;
     let m = (date >> 5) & 0x0F;
     let d = date & 0x1F;
@@ -22,7 +22,7 @@ pub fn parse(date: u16, time: u16) -> DateTime<Utc> {
     .into()
 }
 
-pub fn serialize(datetime: DateTime<Utc>) -> (u16, u16) {
+pub fn serialize(datetime: &DateTime<Local>) -> (u16, u16) {
     let date = datetime.format("%Y-%m-%d").to_string();
     let time = datetime.format("%H:%M:%S").to_string();
 

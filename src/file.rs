@@ -2,7 +2,7 @@ use std::{
     cmp::min,
     fs::{FileTimes, OpenOptions},
     io::{Read, Seek, Write},
-    time::SystemTime,
+    mem::drop
 };
 
 use chrono::{DateTime, Utc};
@@ -15,44 +15,49 @@ pub struct Times {
 }
 
 #[derive(Debug)]
-pub struct FileReader<'a> {
-    path: &'a str,
+pub struct FileReader {
+    path: String,
     file: std::fs::File,
     pos: u64,
 }
 
-impl<'a> FileReader<'a> {
-    pub fn new(path: &'a str) -> Self {
+impl<'a> FileReader {
+    pub fn new(path: &'a String) -> Self {
         let mut file = OpenOptions::new().read(true).open(path).unwrap();
         file.rewind().unwrap();
 
-        Self { path, file, pos: 0 }
+        Self { path: path.to_owned(), file, pos: 0 }
+    }
+
+    pub fn close(self) {
+        self.file.sync_all().unwrap();
+        drop(self);
     }
 
     pub fn export(
         &mut self,
-        offset: u64,
-        len: u64,
+        offset: &u64,
+        len: &u64,
         target: &mut FileWriter,
-        modified: DateTime<Utc>,
-        buffer_size: u64,
+        modified: &DateTime<Utc>,
+        buffer_size: &u64,
     ) {
         let pos_before = self.get_position();
         self.seek(offset);
-        let mut buf = vec![0; buffer_size as usize];
-        let mut remaining = len;
+        let mut buf = vec![0; *buffer_size as usize];
+        let mut remaining = *len;
 
         while remaining > 0 {
-            let to_read = min(buffer_size as u64, remaining) as usize;
+            let to_read = min(*buffer_size as u64, remaining) as usize;
             let read = self.read(&mut buf[..to_read]);
             target.write(read);
             remaining -= to_read as u64;
         }
 
-        let time = FileTimes::new().set_modified(modified.into());
-        target.set_times(time);
+        let time = FileTimes::new().set_modified(modified.to_owned().into());
+        target.set_times(&time);
 
-        self.seek(pos_before);
+        self.seek(&pos_before);
     }
 
     pub fn get_times(&self) -> Times {
@@ -60,28 +65,28 @@ impl<'a> FileReader<'a> {
         Times {
             created: metadata
                 .created()
-                .unwrap_or_else(|_| SystemTime::now())
+                .unwrap_or_else(|_| metadata.modified().unwrap().into())
                 .into(),
             accessed: metadata.accessed().unwrap().into(),
             modified: metadata.modified().unwrap().into(),
         }
     }
 
-    pub fn get_path(&self) -> &str {
-        self.path
+    pub fn get_path(&self) -> &String {
+        &self.path
     }
 
-    pub fn seek(&mut self, pos: u64) {
-        self.file.seek(std::io::SeekFrom::Start(pos)).unwrap();
-        self.pos = pos;
+    pub fn seek(&mut self, pos: &u64) {
+        self.file.seek(std::io::SeekFrom::Start(*pos)).unwrap();
+        self.pos = *pos;
     }
 
     pub fn rewind(&mut self) {
-        self.seek(0);
+        self.seek(&0);
     }
 
-    pub fn jump(&mut self, offset: i128) {
-        self.seek((self.pos as i128 + offset) as u64);
+    pub fn jump(&mut self, offset: &i128) {
+        self.seek(&((self.pos as i128 + offset) as u64));
     }
 
     pub fn get_position(&self) -> u64 {
@@ -98,14 +103,14 @@ impl<'a> FileReader<'a> {
         buf
     }
 
-    pub fn read_utf8(&mut self, len: u64) -> String {
-        let mut buf = vec![0; len as usize];
+    pub fn read_utf8(&mut self, len: &u64) -> String {
+        let mut buf = vec![0; *len as usize];
         self.read(&mut buf);
         String::from_utf8(buf).unwrap()
     }
 
-    pub fn read_u8array(&mut self, len: u64) -> Vec<u8> {
-        let mut buf = vec![0; len as usize];
+    pub fn read_u8array(&mut self, len: &u64) -> Vec<u8> {
+        let mut buf = vec![0; *len as usize];
         self.read(&mut buf);
         buf
     }
@@ -166,15 +171,15 @@ impl<'a> FileReader<'a> {
 }
 
 #[derive(Debug)]
-pub struct FileWriter<'a> {
-    path: &'a str,
+pub struct FileWriter {
+    path: String,
     file: std::fs::File,
     pos: u64,
 }
 
-impl<'a> FileWriter<'a> {
-    pub fn new(path: &'a str, append: bool) -> Self {
-        if append {
+impl<'a> FileWriter {
+    pub fn new(path: &'a String, append: &bool) -> Self {
+        if *append {
             let mut file = OpenOptions::new()
                 .write(true)
                 .create(true)
@@ -183,7 +188,7 @@ impl<'a> FileWriter<'a> {
                 .unwrap();
             file.rewind().unwrap();
             return Self {
-                path,
+                path: path.to_owned(),
                 pos: file.metadata().unwrap().len(),
                 file,
             };
@@ -196,32 +201,33 @@ impl<'a> FileWriter<'a> {
             .unwrap();
         file.rewind().unwrap();
 
-        Self { path, file, pos: 0 }
+        Self { path: path.to_owned(), file, pos: 0 }
     }
 
-    pub fn close(&mut self) {
+    pub fn close(self) {
         self.file.sync_all().unwrap();
+        drop(self);
     }
 
-    pub fn set_times(&self, times: FileTimes) {
-        self.file.set_times(times).unwrap();
+    pub fn set_times(&self, times: &FileTimes) {
+        self.file.set_times(*times).unwrap();
     }
 
-    pub fn get_path(&self) -> &str {
-        self.path
+    pub fn get_path(&self) -> &String {
+        &self.path
     }
 
-    pub fn seek(&mut self, pos: u64) {
-        self.file.seek(std::io::SeekFrom::Start(pos)).unwrap();
-        self.pos = pos;
+    pub fn seek(&mut self, pos: &u64) {
+        self.file.seek(std::io::SeekFrom::Start(*pos)).unwrap();
+        self.pos = *pos;
     }
 
     pub fn rewind(&mut self) {
-        self.seek(0);
+        self.seek(&0);
     }
 
-    pub fn jump(&mut self, offset: i128) {
-        self.seek((self.pos as i128 + offset) as u64);
+    pub fn jump(&mut self, offset: &i128) {
+        self.seek(&((self.pos as i128 + offset) as u64));
     }
 
     pub fn get_position(&self) -> u64 {
@@ -237,7 +243,7 @@ impl<'a> FileWriter<'a> {
         self.pos += buf.len() as u64;
     }
 
-    pub fn write_utf8(&mut self, s: &str) {
+    pub fn write_utf8(&mut self, s: &String) {
         self.write(s.as_bytes());
     }
 
@@ -245,39 +251,39 @@ impl<'a> FileWriter<'a> {
         self.write(buf.as_slice());
     }
 
-    pub fn write_u8(&mut self, n: u8) {
+    pub fn write_u8(&mut self, n: &u8) {
         self.write(&n.to_le_bytes());
     }
 
-    pub fn write_u16le(&mut self, n: u16) {
+    pub fn write_u16le(&mut self, n: &u16) {
         self.write(&n.to_le_bytes());
     }
 
-    pub fn write_u16be(&mut self, n: u16) {
+    pub fn write_u16be(&mut self, n: &u16) {
         self.write(&n.to_be_bytes());
     }
 
-    pub fn write_u32le(&mut self, n: u32) {
+    pub fn write_u32le(&mut self, n: &u32) {
         self.write(&n.to_le_bytes());
     }
 
-    pub fn write_u32be(&mut self, n: u32) {
+    pub fn write_u32be(&mut self, n: &u32) {
         self.write(&n.to_be_bytes());
     }
 
-    pub fn write_u64le(&mut self, n: u64) {
+    pub fn write_u64le(&mut self, n: &u64) {
         self.write(&n.to_le_bytes());
     }
 
-    pub fn write_u64be(&mut self, n: u64) {
+    pub fn write_u64be(&mut self, n: &u64) {
         self.write(&n.to_be_bytes());
     }
 
-    pub fn write_u128le(&mut self, n: u128) {
+    pub fn write_u128le(&mut self, n: &u128) {
         self.write(&n.to_le_bytes());
     }
 
-    pub fn write_u128be(&mut self, n: u128) {
+    pub fn write_u128be(&mut self, n: &u128) {
         self.write(&n.to_be_bytes());
     }
 }

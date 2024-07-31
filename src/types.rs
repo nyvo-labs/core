@@ -3,13 +3,13 @@ use chrono::{DateTime, Utc};
 use crate::FileReader;
 
 #[derive(Debug)]
-pub struct ArchiveMetadata<'a> {
-    pub format: &'a str,
+pub struct ArchiveMetadata {
+    pub format: &'static str,
 }
 
 #[derive(Debug)]
 pub struct ZipArchiveMetadata<'a> {
-    pub archive: ArchiveMetadata<'a>,
+    pub archive: ArchiveMetadata,
     pub files: Vec<ZipFileEntry<'a>>,
 }
 
@@ -40,7 +40,7 @@ pub struct File<'a> {
     pub size: u64,
     pub modified: DateTime<Utc>,
     pub is_directory: bool,
-    pub source: &'a mut FileReader<'a>,
+    pub source: &'a mut FileReader,
 }
 
 #[derive(Debug)]
