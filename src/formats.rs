@@ -23,7 +23,10 @@ pub enum FormatMetadata<'a> {
     Zip(zip::ZipArchiveMetadata<'a>),
 }
 
-pub fn to_format_metadata<'a>(format: Formats, metadata: &'a dyn ArchiveMetadata<'a>) -> FormatMetadata<'a> {
+pub fn to_format_metadata<'a>(
+    format: Formats,
+    metadata: &'a dyn ArchiveMetadata<'a>,
+) -> FormatMetadata<'a> {
     match format {
         Formats::Zip => FormatMetadata::Zip(zip::to_zip_archive_metadata(metadata)),
     }

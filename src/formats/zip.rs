@@ -47,7 +47,9 @@ impl<'a> Clone for ZipArchiveMetadata<'a> {
     }
 }
 
-pub fn to_zip_archive_metadata<'a>(from: &'a (dyn ArchiveMetadata<'a> + 'a)) -> ZipArchiveMetadata<'a> {
+pub fn to_zip_archive_metadata<'a>(
+    from: &'a (dyn ArchiveMetadata<'a> + 'a),
+) -> ZipArchiveMetadata<'a> {
     let original = from.get_original();
     match original {
         OriginalArchiveMetadata::Zip(zip_archive) => zip_archive.clone(),

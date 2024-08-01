@@ -1,4 +1,8 @@
-use corelib::{archive::{self, EntrySource, OriginalArchiveMetadata}, file::{FileReader, FileWriter, FsFile}, formats::Formats};
+use corelib::{
+    archive::{self, EntrySource, OriginalArchiveMetadata},
+    file::{FileReader, FileWriter, FsFile},
+    formats::Formats,
+};
 
 #[test]
 fn sample_000_metadata() {
@@ -162,7 +166,10 @@ fn sample_002_extract() {
 #[test]
 fn create_000_metadata() {
     std::fs::create_dir_all("tests/samples/zip/c000-external").unwrap();
-    let mut test_txt = FileWriter::new(&"tests/samples/zip/c000-external/test.txt".to_string(), &false);
+    let mut test_txt = FileWriter::new(
+        &"tests/samples/zip/c000-external/test.txt".to_string(),
+        &false,
+    );
     test_txt.write(b"Hello, world!\n");
     test_txt.close();
 
@@ -174,7 +181,8 @@ fn create_000_metadata() {
             source: &mut FsFile::new(&"tests/samples/zip/c000-external/test.txt".to_string()),
         }],
         1024,
-    ).unwrap();
+    )
+    .unwrap();
 
     std::fs::remove_dir_all("tests/samples/zip/c000-external").unwrap();
 
@@ -183,8 +191,10 @@ fn create_000_metadata() {
         "tests/samples/zip/c000-external.zip".to_string(),
         true,
         1024,
-    ).unwrap() {
-        OriginalArchiveMetadata::Zip(metadata) => metadata
+    )
+    .unwrap()
+    {
+        OriginalArchiveMetadata::Zip(metadata) => metadata,
     };
 
     assert_eq!(metadata.files.len(), 1);
@@ -199,12 +209,18 @@ fn create_000_metadata() {
 #[test]
 fn create_000_extract() {
     std::fs::create_dir_all("tests/samples/zip/c000-external2").unwrap(); // this is has another name to avoid conflicts
-    let mut test_txt = FileWriter::new(&"tests/samples/zip/c000-external2/test.txt".to_string(), &false);
+    let mut test_txt = FileWriter::new(
+        &"tests/samples/zip/c000-external2/test.txt".to_string(),
+        &false,
+    );
     test_txt.write(b"Hello, world!\n");
     test_txt.close();
 
     std::fs::create_dir_all("tests/samples/zip/c000-external2").unwrap();
-    let mut test_txt = FileWriter::new(&"tests/samples/zip/c000-external2/test.txt".to_string(), &false);
+    let mut test_txt = FileWriter::new(
+        &"tests/samples/zip/c000-external2/test.txt".to_string(),
+        &false,
+    );
     test_txt.write(b"Hello, world!\n");
     test_txt.close();
 
@@ -216,7 +232,8 @@ fn create_000_extract() {
             source: &mut FsFile::new(&"tests/samples/zip/c000-external2/test.txt".to_string()),
         }],
         1024,
-    ).unwrap();
+    )
+    .unwrap();
 
     std::fs::remove_dir_all("tests/samples/zip/c000-external2").unwrap();
 
@@ -229,7 +246,8 @@ fn create_000_extract() {
         true,
         true,
         1024,
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut reader = FileReader::new(&"tests/samples/zip/c000-external2/test.txt".to_string());
     assert_eq!(reader.read_utf8(&reader.get_size()), "Hello, world!\n");
