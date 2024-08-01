@@ -1,11 +1,64 @@
 use std::{
     cmp::min,
-    fs::{FileTimes, OpenOptions},
+    fs::{self, FileTimes, OpenOptions},
     io::{Read, Seek, Write},
     mem::drop,
 };
 
 use chrono::{DateTime, Utc};
+
+use crate::formats::zip::ZipFileEntry;
+
+pub struct FsFile {
+    pub size: u64,
+    pub reader: Option<FileReader>,
+    pub modified: DateTime<Utc>,
+    pub is_directory: bool,
+}
+
+impl FsFile {
+    pub fn new(path: &String) -> Self {
+        if fs::metadata(path).unwrap().is_dir() {
+            return Self {
+                size: 0,
+                reader: None,
+                modified: fs::metadata(path).unwrap().modified().unwrap().into(),
+                is_directory: true,
+            };
+        };
+        let reader = FileReader::new(path);
+        Self {
+            size: reader.get_size(),
+            modified: reader.get_times().modified,
+            reader: Some(reader),
+            is_directory: false,
+        }
+    }
+}
+
+pub trait File {
+    fn get_path(&self) -> &String;
+    fn get_offset(&self) -> &u64;
+    fn get_size(&self) -> &u64;
+    fn get_modified(&self) -> &DateTime<Utc>;
+    fn get_is_directory(&self) -> &bool;
+    fn get_source(&mut self) -> Option<&mut FileReader>;
+    fn get_checksum(&self) -> &u32;
+}
+
+pub enum OriginalFileEntry<'a> {
+    Zip(&'a ZipFileEntry<'a>),
+}
+
+pub trait FileEntry<'a> {
+    fn get_path(&self) -> &String;
+    fn get_offset(&self) -> &u64;
+    fn get_size(&self) -> &u64;
+    fn get_modified(&self) -> &DateTime<Utc>;
+    fn get_is_directory(&self) -> &bool;
+    fn get_uncompressed_size(&self) -> &u32;
+    fn get_original(&'a self) -> OriginalFileEntry<'a>;
+}
 
 #[derive(Debug)]
 pub struct Times {

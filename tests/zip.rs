@@ -1,4 +1,9 @@
-use corelib::{self, helpers::hash::crc32, File, FileReader, FileWriter, ZipArchiveData, ZipFile};
+use corelib::{
+    self,
+    file::{FileReader, FileWriter},
+    formats::zip::{ZipArchiveData, ZipFile},
+    helpers::hash::crc32,
+};
 
 #[test]
 fn sample_000() {
@@ -6,12 +11,12 @@ fn sample_000() {
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 1);
-    assert_eq!(metadata.files[0].file.path, "test.txt");
-    assert_eq!(metadata.files[0].file.size, 14);
+    assert_eq!(metadata.files[0].path, "test.txt");
+    assert_eq!(metadata.files[0].size, 14);
     assert_eq!(metadata.files[0].compression, "stored");
     assert_eq!(metadata.files[0].uncompressed_size, 14);
     assert_eq!(
-        metadata.files[0].file.modified.to_rfc3339(),
+        metadata.files[0].modified.to_rfc3339(),
         "2024-07-11T18:14:42+00:00"
     );
 
@@ -31,20 +36,20 @@ fn sample_001() {
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 2);
-    assert_eq!(metadata.files[0].file.path, "test.txt");
-    assert_eq!(metadata.files[0].file.size, 14);
+    assert_eq!(metadata.files[0].path, "test.txt");
+    assert_eq!(metadata.files[0].size, 14);
     assert_eq!(metadata.files[0].compression, "stored");
     assert_eq!(metadata.files[0].uncompressed_size, 14);
     assert_eq!(
-        metadata.files[0].file.modified.to_rfc3339(),
+        metadata.files[0].modified.to_rfc3339(),
         "2024-07-12T18:11:08+00:00"
     );
-    assert_eq!(metadata.files[1].file.path, "test2.txt");
-    assert_eq!(metadata.files[1].file.size, 16);
+    assert_eq!(metadata.files[1].path, "test2.txt");
+    assert_eq!(metadata.files[1].size, 16);
     assert_eq!(metadata.files[1].compression, "stored");
     assert_eq!(metadata.files[1].uncompressed_size, 16);
     assert_eq!(
-        metadata.files[1].file.modified.to_rfc3339(),
+        metadata.files[1].modified.to_rfc3339(),
         "2024-07-12T18:11:26+00:00"
     );
 
@@ -90,28 +95,28 @@ fn sample_002() {
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 3);
-    assert_eq!(metadata.files[0].file.path, "test/");
-    assert_eq!(metadata.files[0].file.size, 0);
+    assert_eq!(metadata.files[0].path, "test/");
+    assert_eq!(metadata.files[0].size, 0);
     assert_eq!(metadata.files[0].compression, "stored");
     assert_eq!(metadata.files[0].uncompressed_size, 0);
     assert_eq!(
-        metadata.files[0].file.modified.to_rfc3339(),
+        metadata.files[0].modified.to_rfc3339(),
         "2024-07-13T14:27:00+00:00"
     );
-    assert_eq!(metadata.files[1].file.path, "test/test.txt");
-    assert_eq!(metadata.files[1].file.size, 14);
+    assert_eq!(metadata.files[1].path, "test/test.txt");
+    assert_eq!(metadata.files[1].size, 14);
     assert_eq!(metadata.files[1].compression, "stored");
     assert_eq!(metadata.files[1].uncompressed_size, 14);
     assert_eq!(
-        metadata.files[1].file.modified.to_rfc3339(),
+        metadata.files[1].modified.to_rfc3339(),
         "2024-07-13T14:26:48+00:00"
     );
-    assert_eq!(metadata.files[2].file.path, "test.txt");
-    assert_eq!(metadata.files[2].file.size, 14);
+    assert_eq!(metadata.files[2].path, "test.txt");
+    assert_eq!(metadata.files[2].size, 14);
     assert_eq!(metadata.files[2].compression, "stored");
     assert_eq!(metadata.files[2].uncompressed_size, 14);
     assert_eq!(
-        metadata.files[2].file.modified.to_rfc3339(),
+        metadata.files[2].modified.to_rfc3339(),
         "2024-07-13T14:26:48+00:00"
     );
 
@@ -172,14 +177,12 @@ fn create_000() {
         &mut ZipArchiveData {
             files: vec![ZipFile {
                 checksum: crc32::hash(&mut input, &0, &size, &1024),
-                file: File {
-                    path: "test.txt".to_string(),
-                    offset: 0,
-                    size,
-                    modified: input.get_times().modified,
-                    is_directory: false,
-                    source: &mut input,
-                },
+                path: "test.txt".to_string(),
+                offset: 0,
+                size,
+                modified: input.get_times().modified,
+                is_directory: false,
+                source: Some(&mut input),
             }],
         },
         &1024,
@@ -192,8 +195,8 @@ fn create_000() {
 
     let metadata = corelib::formats::zip::parser::metadata(&mut file);
     assert_eq!(metadata.files.len(), 1);
-    assert_eq!(metadata.files[0].file.path, "test.txt");
-    assert_eq!(metadata.files[0].file.size, 14);
+    assert_eq!(metadata.files[0].path, "test.txt");
+    assert_eq!(metadata.files[0].size, 14);
     assert_eq!(metadata.files[0].compression, "stored");
     assert_eq!(metadata.files[0].uncompressed_size, 14);
 
