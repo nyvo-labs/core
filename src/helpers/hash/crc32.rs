@@ -2,7 +2,7 @@ use std::cmp::min;
 
 use crc32fast::Hasher;
 
-use crate::FileReader;
+use crate::file::FileReader;
 
 pub fn hash(file: &mut FileReader, offset: &u64, size: &u64, buffer_size: &u64) -> u32 {
     let pos_before = file.get_position();

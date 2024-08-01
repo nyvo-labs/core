@@ -1,7 +1,8 @@
 use crate::{
     helpers::{datetime::msdos, hash::crc32},
-    ArchiveMetadata, FileEntry, FileReader, FileWriter, ZipArchiveMetadata, ZipFileEntry,
+    file::{FileReader, FileWriter},
 };
+use super::{ZipArchiveMetadata, ZipFileEntry};
 
 pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
@@ -12,13 +13,12 @@ pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
 
     //println!("0x{:x}", signature);
     ZipArchiveMetadata {
-        archive: ArchiveMetadata { format: "zip" },
         files: local_files.0,
     }
 }
 
 pub fn get_file(file: &mut FileReader, entry: &ZipFileEntry) -> Vec<u8> {
-    file.seek(&entry.file.offset);
+    file.seek(&entry.offset);
     file.read_u8array(&(entry.uncompressed_size as u64))
 }
 
@@ -26,17 +26,17 @@ pub fn extract(
     file: &mut FileReader,
     entries: &Vec<ZipFileEntry>,
     buffer_size: &u64,
-    path_rewriter: &dyn Fn(&str) -> String,
+    path_rewriter: &dyn Fn(&String) -> String,
 ) {
     for entry in entries {
-        let path = path_rewriter(&entry.file.path);
-        if !entry.file.is_directory {
+        let path = path_rewriter(&entry.path);
+        if !entry.is_directory {
             let mut target = FileWriter::new(&path, &false);
             file.export(
-                &entry.file.offset,
-                &entry.file.size,
+                &entry.offset,
+                &entry.size,
                 &mut target,
-                &entry.file.modified.into(),
+                &entry.modified.into(),
                 buffer_size,
             );
         } else {
@@ -93,13 +93,11 @@ fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
         let name = file.read_utf8(&name_length);
         let extra = file.read_u8array(&extra_length);
         files.push(ZipFileEntry {
-            file: FileEntry {
-                offset: file.get_position(),
-                size: size_compressed as u64,
-                modified: msdos::parse(&lastmod_date, &lastmod_time).into(),
-                is_directory: name.ends_with('/'),
-                path: name,
-            },
+            offset: file.get_position(),
+            size: size_compressed as u64,
+            modified: msdos::parse(&lastmod_date, &lastmod_time).into(),
+            is_directory: name.ends_with('/'),
+            path: name,
             version,
             bit_flag,
             compression: compression_method,
@@ -115,6 +113,15 @@ fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
 }
 
 pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size: &u64) -> bool {
-    let hash = crc32::hash(source, &file.file.offset, &file.file.size, buffer_size);
+    let hash = crc32::hash(source, &file.offset, &file.size, buffer_size);
     hash == file.checksum
+}
+
+pub fn check_integrity_all(source: &mut FileReader, files: &Vec<ZipFileEntry>, buffer_size: &u64) -> bool {
+    for file in files {
+        if !check_integrity(source, file, buffer_size) {
+            return false;
+        }
+    }
+    true
 }
