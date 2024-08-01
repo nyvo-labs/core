@@ -1,6 +1,11 @@
 use crate::{
     file::{FileEntry, FileReader, FileWriter, FsFile},
-    formats::{self, zip::{ZipFile, ZipFileEntry}, Formats}, helpers::hash::crc32,
+    formats::{
+        self,
+        zip::{ZipFile, ZipFileEntry},
+        Formats,
+    },
+    helpers::hash::crc32,
 };
 use std::fs::create_dir_all;
 
@@ -119,36 +124,48 @@ pub struct EntrySource<'a> {
     pub source: &'a mut FsFile,
 }
 
-pub fn create(format: Formats, output: String, input: &mut Vec<EntrySource>, buffer_size: u64) -> Result<(), String> {
+pub fn create(
+    format: Formats,
+    output: String,
+    input: &mut Vec<EntrySource>,
+    buffer_size: u64,
+) -> Result<(), String> {
     let mut file = FileWriter::new(&output, &false);
 
     match format {
         Formats::Zip => {
-            let files: Vec<ZipFile> = input.iter_mut().map(|entry| {
-                if entry.source.is_directory {
-                    return ZipFile {
-                        checksum: 0,
+            let files: Vec<ZipFile> = input
+                .iter_mut()
+                .map(|entry| {
+                    if entry.source.is_directory {
+                        return ZipFile {
+                            checksum: 0,
+                            path: entry.path.clone(),
+                            offset: 0,
+                            size: 0,
+                            modified: entry.source.modified,
+                            is_directory: true,
+                            source: None,
+                        };
+                    };
+                    let size = entry.source.size.to_owned();
+                    let reader = entry.source.reader.as_mut().unwrap();
+                    ZipFile {
+                        checksum: crc32::hash(reader, &0, &size, &buffer_size),
                         path: entry.path.clone(),
                         offset: 0,
-                        size: 0,
+                        size,
                         modified: entry.source.modified,
-                        is_directory: true,
-                        source: None,
-                    };
-                };
-                let size = entry.source.size.to_owned();
-                let reader = entry.source.reader.as_mut().unwrap();
-                ZipFile {
-                    checksum: crc32::hash(reader, &0, &size, &buffer_size),
-                    path: entry.path.clone(),
-                    offset: 0,
-                    size,
-                    modified: entry.source.modified,
-                    is_directory: entry.source.is_directory,
-                    source: Some(reader),
-                }
-            }).collect();
-            formats::zip::writer::write(&mut file, &mut formats::zip::ZipArchiveData { files }, &buffer_size);
+                        is_directory: entry.source.is_directory,
+                        source: Some(reader),
+                    }
+                })
+                .collect();
+            formats::zip::writer::write(
+                &mut file,
+                &mut formats::zip::ZipArchiveData { files },
+                &buffer_size,
+            );
         }
     }
 

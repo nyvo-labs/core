@@ -1,8 +1,8 @@
-use crate::{
-    helpers::{datetime::msdos, hash::crc32},
-    file::{FileReader, FileWriter},
-};
 use super::{ZipArchiveMetadata, ZipFileEntry};
+use crate::{
+    file::{FileReader, FileWriter},
+    helpers::{datetime::msdos, hash::crc32},
+};
 
 pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
@@ -117,7 +117,11 @@ pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size
     hash == file.checksum
 }
 
-pub fn check_integrity_all(source: &mut FileReader, files: &Vec<ZipFileEntry>, buffer_size: &u64) -> bool {
+pub fn check_integrity_all(
+    source: &mut FileReader,
+    files: &Vec<ZipFileEntry>,
+    buffer_size: &u64,
+) -> bool {
     for file in files {
         if !check_integrity(source, file, buffer_size) {
             return false;
