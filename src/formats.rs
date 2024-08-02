@@ -1,9 +1,11 @@
 use crate::archive::ArchiveMetadata;
 
+pub mod rar;
 pub mod zip;
 
 pub enum Formats {
     Zip,
+    Rar,
 }
 
 pub fn from_string(format: &str) -> Formats {
@@ -16,6 +18,7 @@ pub fn from_string(format: &str) -> Formats {
 pub fn to_string(format: &Formats) -> String {
     match format {
         Formats::Zip => "zip".to_string(),
+        Formats::Rar => "rar".to_string(),
     }
 }
 
@@ -29,5 +32,6 @@ pub fn to_format_metadata<'a>(
 ) -> FormatMetadata<'a> {
     match format {
         Formats::Zip => FormatMetadata::Zip(zip::to_zip_archive_metadata(metadata)),
+        Formats::Rar => todo!(),
     }
 }

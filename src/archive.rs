@@ -40,6 +40,7 @@ pub fn metadata<'a>(
             }
             OriginalArchiveMetadata::Zip(metadata)
         }
+        Formats::Rar => todo!(),
     };
 
     Ok(Box::new(metadata))
@@ -72,6 +73,7 @@ pub fn extract(
             }
             &metadata.clone() as &dyn ArchiveMetadata
         }
+        Formats::Rar => todo!(),
     };
 
     let files = metadata.get_files();
@@ -84,34 +86,43 @@ pub fn extract(
                     format!("{}/{}", &output, &path)
                 });
             }
+            Formats::Rar => todo!(),
         }
     } else if index.is_some() {
         let index = index.unwrap();
         if index >= files.len() as u32 {
             return Err("Index out of range".to_string());
         }
-        formats::zip::parser::extract(
-            &mut file,
-            &formats::zip::to_zip_entries(files),
-            &buffer_size,
-            &|path| format!("{}/{}", &output, &path),
-        );
+        match format {
+            Formats::Zip => formats::zip::parser::extract(
+                &mut file,
+                &formats::zip::to_zip_entries(files),
+                &buffer_size,
+                &|path| format!("{}/{}", &output, &path),
+            ),
+            Formats::Rar => todo!(),
+        };
     } else {
         let path = path.unwrap();
-        let files: Vec<ZipFileEntry> = metadata
-            .get_files()
-            .iter()
-            .filter_map(|file| {
-                if file.get_path().starts_with(&path) {
-                    Some(formats::zip::to_zip_entry(*file))
-                } else {
-                    None
-                }
-            })
-            .collect();
-        formats::zip::parser::extract(&mut file, &files, &buffer_size, &|path| {
-            format!("{}/{}", &output, &path)
-        });
+        match format {
+            Formats::Zip => {
+                let files: Vec<ZipFileEntry> = metadata
+                    .get_files()
+                    .iter()
+                    .filter_map(|file| {
+                        if file.get_path().starts_with(&path) {
+                            Some(formats::zip::to_zip_entry(*file))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                formats::zip::parser::extract(&mut file, &files, &buffer_size, &|path| {
+                    format!("{}/{}", &output, &path)
+                });
+            }
+            Formats::Rar => todo!(),
+        }
     };
 
     Ok(())
@@ -175,6 +186,7 @@ pub fn create(
                 &buffer_size,
             );
         }
+        _ => return Err("Format not supported for archive creation.".to_string()),
     }
 
     Ok(())
