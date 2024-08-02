@@ -1,8 +1,8 @@
 use super::ZipArchiveData;
 use crate::{file::FileWriter, helpers::datetime::msdos};
 
-pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: &u64) {
-    for file in &mut data.files {
+pub fn write(target: &mut FileWriter, data: ZipArchiveData, buffer_size: &u64) {
+    for file in data.files {
         if file.is_directory {
             todo!();
         }
@@ -35,12 +35,14 @@ pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: &u
         target.write_utf8(name);
         target.write_u8array(extra);
 
-        file.source.as_mut().unwrap().export(
+        let mut source = file.source.unwrap();
+        source.export(
             &file.offset,
             &file.size,
             target,
             &file.modified,
             buffer_size,
         );
+        source.close();
     }
 }

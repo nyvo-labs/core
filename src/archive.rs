@@ -117,15 +117,24 @@ pub fn extract(
     Ok(())
 }
 
-pub struct EntrySource<'a> {
+pub struct EntrySource {
     pub path: String,
-    pub source: &'a mut FsFile,
+    pub source: FsFile,
+}
+
+impl Clone for EntrySource {
+    fn clone(&self) -> Self {
+        Self {
+            path: self.path.clone(),
+            source: self.source.clone(),
+        }
+    }
 }
 
 pub fn create(
     format: Formats,
     output: String,
-    input: &mut [EntrySource],
+    input: Vec<EntrySource>,
     buffer_size: u64,
 ) -> Result<(), String> {
     let mut file = FileWriter::new(&output, &false);
@@ -133,7 +142,8 @@ pub fn create(
     match format {
         Formats::Zip => {
             let files: Vec<ZipFile> = input
-                .iter_mut()
+                .iter()
+                .cloned()
                 .map(|entry| {
                     if entry.source.is_directory {
                         return ZipFile {
@@ -147,9 +157,9 @@ pub fn create(
                         };
                     };
                     let size = entry.source.size.to_owned();
-                    let reader = entry.source.reader.as_mut().unwrap();
+                    let mut reader = entry.source.reader.unwrap();
                     ZipFile {
-                        checksum: crc32::hash(reader, &0, &size, &buffer_size),
+                        checksum: crc32::hash(&mut reader, &0, &size, &buffer_size),
                         path: entry.path.clone(),
                         offset: 0,
                         size,
@@ -161,7 +171,7 @@ pub fn create(
                 .collect();
             formats::zip::writer::write(
                 &mut file,
-                &mut formats::zip::ZipArchiveData { files },
+                formats::zip::ZipArchiveData { files },
                 &buffer_size,
             );
         }

@@ -167,9 +167,9 @@ fn create_000_metadata() {
     archive::create(
         Formats::Zip,
         "tests/samples/zip/c000-external.zip".to_string(),
-        &mut [EntrySource {
+        vec![EntrySource {
             path: "test.txt".to_string(),
-            source: &mut FsFile::new(&"tests/samples/zip/c000-external/test.txt".to_string()),
+            source: FsFile::new(&"tests/samples/zip/c000-external/test.txt".to_string()),
         }],
         1024,
     )
@@ -204,20 +204,12 @@ fn create_000_extract() {
     test_txt.write(b"Hello, world!\n");
     test_txt.close();
 
-    std::fs::create_dir_all("tests/samples/zip/c000-external2").unwrap();
-    let mut test_txt = FileWriter::new(
-        &"tests/samples/zip/c000-external2/test.txt".to_string(),
-        &false,
-    );
-    test_txt.write(b"Hello, world!\n");
-    test_txt.close();
-
     archive::create(
         Formats::Zip,
         "tests/samples/zip/c000-external2.zip".to_string(),
-        &mut [EntrySource {
+        vec![EntrySource {
             path: "test.txt".to_string(),
-            source: &mut FsFile::new(&"tests/samples/zip/c000-external2/test.txt".to_string()),
+            source: FsFile::new(&"tests/samples/zip/c000-external2/test.txt".to_string()),
         }],
         1024,
     )
@@ -243,4 +235,42 @@ fn create_000_extract() {
 
     std::fs::remove_dir_all("tests/samples/zip/c000-external2").unwrap();
     std::fs::remove_file("tests/samples/zip/c000-external2.zip").unwrap();
+}
+
+#[test]
+fn create_000_with_iter() {
+    std::fs::create_dir_all("tests/samples/zip/c000-external3").unwrap(); // this is has another name to avoid conflicts
+    let mut test_txt = FileWriter::new(
+        &"tests/samples/zip/c000-external3/test.txt".to_string(),
+        &false,
+    );
+    test_txt.write(b"Hello, world!\n");
+    test_txt.close();
+
+    let input = "tests/samples/zip/c000-external3/test.txt:test.txt";
+    let files: Vec<EntrySource> = input // implementation from the CLI
+        .split(';')
+        .map(|file| {
+            let file = file.split(':').collect::<Vec<&str>>();
+            let source_path = file.first().unwrap();
+            let mut target_path = source_path;
+            if let Some(path) = file.get(1) {
+                target_path = path;
+            }
+            EntrySource {
+                path: target_path.to_string(),
+                source: FsFile::new(&source_path.to_string()),
+            }
+        })
+        .collect();
+    archive::create(
+        Formats::Zip,
+        "tests/samples/zip/c000-external3.zip".to_string(),
+        files,
+        1024,
+    )
+    .unwrap();
+
+    std::fs::remove_dir_all("tests/samples/zip/c000-external3").unwrap();
+    std::fs::remove_file("tests/samples/zip/c000-external3.zip").unwrap();
 }
