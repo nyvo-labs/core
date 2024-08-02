@@ -105,7 +105,7 @@ impl<'a> FileReader {
         let mut remaining = *len;
 
         while remaining > 0 {
-            let to_read = min(*buffer_size as u64, remaining) as usize;
+            let to_read = min(*buffer_size, remaining) as usize;
             let read = self.read(&mut buf[..to_read]);
             target.write(read);
             remaining -= to_read as u64;
@@ -122,7 +122,7 @@ impl<'a> FileReader {
         Times {
             created: metadata
                 .created()
-                .unwrap_or_else(|_| metadata.modified().unwrap().into())
+                .unwrap_or_else(|_| metadata.modified().unwrap())
                 .into(),
             accessed: metadata.accessed().unwrap().into(),
             modified: metadata.modified().unwrap().into(),
@@ -238,7 +238,6 @@ impl<'a> FileWriter {
     pub fn new(path: &'a String, append: &bool) -> Self {
         if *append {
             let mut file = OpenOptions::new()
-                .write(true)
                 .create(true)
                 .append(true)
                 .open(path)
@@ -254,6 +253,7 @@ impl<'a> FileWriter {
         let mut file = OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(path)
             .unwrap();
         file.rewind().unwrap();

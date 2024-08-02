@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 pub mod archive;
 pub mod file;
 pub mod formats;

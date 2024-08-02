@@ -39,7 +39,7 @@ pub fn write(target: &mut FileWriter, data: &mut ZipArchiveData, buffer_size: &u
             &file.offset,
             &file.size,
             target,
-            &file.modified.into(),
+            &file.modified,
             buffer_size,
         );
     }

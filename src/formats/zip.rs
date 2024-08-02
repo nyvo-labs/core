@@ -98,7 +98,7 @@ impl<'a> FileEntry<'a> for ZipFileEntry<'a> {
     }
 
     fn get_original(&'a self) -> OriginalFileEntry<'a> {
-        OriginalFileEntry::Zip(&self)
+        OriginalFileEntry::Zip(self)
     }
 }
 

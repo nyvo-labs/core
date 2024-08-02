@@ -14,9 +14,9 @@ pub fn hash(file: &mut FileReader, offset: &u64, size: &u64, buffer_size: &u64) 
 
     let mut remaining = *size;
     while remaining > 0 {
-        let to_read = min(*buffer_size as u64, remaining) as usize;
+        let to_read = min(*buffer_size, remaining) as usize;
         let read = file.read(&mut buf[..to_read]);
-        hasher.update(&read);
+        hasher.update(read);
         remaining -= to_read as u64;
     }
 

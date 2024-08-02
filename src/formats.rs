@@ -6,8 +6,8 @@ pub enum Formats {
     Zip,
 }
 
-pub fn from_string(format: &String) -> Formats {
-    match format.as_str() {
+pub fn from_string(format: &str) -> Formats {
+    match format {
         "zip" => Formats::Zip,
         _ => panic!("Unsupported format"),
     }
