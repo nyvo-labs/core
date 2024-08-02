@@ -141,17 +141,17 @@ pub fn to_zip_entries<'a>(from: Vec<&'a (dyn FileEntry<'a> + 'a)>) -> Vec<ZipFil
 }
 
 #[derive(Debug)]
-pub struct ZipFile<'a> {
+pub struct ZipFile {
     pub path: String,
     pub offset: u64,
     pub size: u64,
     pub modified: DateTime<Utc>,
     pub is_directory: bool,
-    pub source: Option<&'a mut FileReader>,
+    pub source: Option<FileReader>,
     pub checksum: u32,
 }
 
-impl File for ZipFile<'_> {
+impl File for ZipFile {
     fn get_path(&self) -> &String {
         &self.path
     }
@@ -174,7 +174,7 @@ impl File for ZipFile<'_> {
 
     fn get_source(&mut self) -> Option<&mut FileReader> {
         match &mut self.source {
-            Some(source) => Some(*source),
+            Some(source) => Some(source),
             None => None,
         }
     }
@@ -185,6 +185,6 @@ impl File for ZipFile<'_> {
 }
 
 #[derive(Debug)]
-pub struct ZipArchiveData<'a> {
-    pub files: Vec<ZipFile<'a>>,
+pub struct ZipArchiveData {
+    pub files: Vec<ZipFile>,
 }

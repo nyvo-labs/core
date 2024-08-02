@@ -16,6 +16,17 @@ pub struct FsFile {
     pub is_directory: bool,
 }
 
+impl Clone for FsFile {
+    fn clone(&self) -> Self {
+        Self {
+            size: self.size,
+            reader: self.reader.clone(),
+            modified: self.modified,
+            is_directory: self.is_directory,
+        }
+    }
+}
+
 impl FsFile {
     pub fn new(path: &String) -> Self {
         if fs::metadata(path).unwrap().is_dir() {
@@ -224,6 +235,16 @@ impl<'a> FileReader {
         let mut buf = [0; 16];
         self.read(&mut buf);
         u128::from_be_bytes(buf)
+    }
+}
+
+impl Clone for FileReader {
+    fn clone(&self) -> Self {
+        Self {
+            path: self.path.clone(),
+            file: OpenOptions::new().read(true).open(&self.path).unwrap(),
+            pos: self.pos,
+        }
     }
 }
 

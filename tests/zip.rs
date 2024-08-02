@@ -174,7 +174,7 @@ fn create_000() {
     let size = input.get_size();
     corelib::formats::zip::writer::write(
         &mut output,
-        &mut ZipArchiveData {
+        ZipArchiveData {
             files: vec![ZipFile {
                 checksum: crc32::hash(&mut input, &0, &size, &1024),
                 path: "test.txt".to_string(),
@@ -182,13 +182,11 @@ fn create_000() {
                 size,
                 modified: input.get_times().modified,
                 is_directory: false,
-                source: Some(&mut input),
+                source: Some(input),
             }],
         },
         &1024,
     );
-    input.close();
-
     output.close();
 
     let mut file = FileReader::new(&"tests/samples/zip/c000.zip".to_string());
