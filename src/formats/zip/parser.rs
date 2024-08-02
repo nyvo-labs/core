@@ -36,7 +36,7 @@ pub fn extract(
                 &entry.offset,
                 &entry.size,
                 &mut target,
-                &entry.modified.into(),
+                &entry.modified,
                 buffer_size,
             );
         } else {

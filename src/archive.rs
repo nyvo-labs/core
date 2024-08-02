@@ -29,14 +29,14 @@ pub fn metadata<'a>(
     let metadata = match format {
         Formats::Zip => {
             let metadata = formats::zip::parser::metadata(&mut file);
-            if check_integrity {
-                if !formats::zip::parser::check_integrity_all(
+            if check_integrity
+                && !formats::zip::parser::check_integrity_all(
                     &mut file,
                     &metadata.files,
                     &buffer_size,
-                ) {
-                    return Err("Integrity check failed".to_string());
-                }
+                )
+            {
+                return Err("Integrity check failed".to_string());
             }
             OriginalArchiveMetadata::Zip(metadata)
         }
@@ -61,14 +61,14 @@ pub fn extract(
     let metadata: &dyn ArchiveMetadata = match format {
         Formats::Zip => {
             let metadata = formats::zip::parser::metadata(&mut file);
-            if check_integrity {
-                if !formats::zip::parser::check_integrity_all(
+            if check_integrity
+                && !formats::zip::parser::check_integrity_all(
                     &mut file,
                     &metadata.files,
                     &buffer_size,
-                ) {
-                    return Err("Integrity check failed".to_string());
-                }
+                )
+            {
+                return Err("Integrity check failed".to_string());
             }
             &metadata.clone() as &dyn ArchiveMetadata
         }
@@ -85,35 +85,33 @@ pub fn extract(
                 });
             }
         }
-    } else {
-        if index != None {
-            let index = index.unwrap();
-            if index >= files.len() as u32 {
-                return Err("Index out of range".to_string());
-            }
-            formats::zip::parser::extract(
-                &mut file,
-                &formats::zip::to_zip_entries(files),
-                &buffer_size,
-                &|path| format!("{}/{}", &output, &path),
-            );
-        } else {
-            let path = path.unwrap();
-            let files: Vec<ZipFileEntry> = metadata
-                .get_files()
-                .iter()
-                .filter_map(|file| {
-                    if file.get_path().starts_with(&path) {
-                        Some(formats::zip::to_zip_entry(*file))
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-            formats::zip::parser::extract(&mut file, &files, &buffer_size, &|path| {
-                format!("{}/{}", &output, &path)
-            });
+    } else if index.is_some() {
+        let index = index.unwrap();
+        if index >= files.len() as u32 {
+            return Err("Index out of range".to_string());
         }
+        formats::zip::parser::extract(
+            &mut file,
+            &formats::zip::to_zip_entries(files),
+            &buffer_size,
+            &|path| format!("{}/{}", &output, &path),
+        );
+    } else {
+        let path = path.unwrap();
+        let files: Vec<ZipFileEntry> = metadata
+            .get_files()
+            .iter()
+            .filter_map(|file| {
+                if file.get_path().starts_with(&path) {
+                    Some(formats::zip::to_zip_entry(*file))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        formats::zip::parser::extract(&mut file, &files, &buffer_size, &|path| {
+            format!("{}/{}", &output, &path)
+        });
     };
 
     Ok(())
@@ -127,7 +125,7 @@ pub struct EntrySource<'a> {
 pub fn create(
     format: Formats,
     output: String,
-    input: &mut Vec<EntrySource>,
+    input: &mut [EntrySource],
     buffer_size: u64,
 ) -> Result<(), String> {
     let mut file = FileWriter::new(&output, &false);

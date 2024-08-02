@@ -6,16 +6,13 @@ use corelib::{
 
 #[test]
 fn sample_000_metadata() {
-    let metadata = match *archive::metadata(
+    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/000.zip".to_string(),
         true,
         1024,
     )
-    .unwrap()
-    {
-        OriginalArchiveMetadata::Zip(metadata) => metadata,
-    };
+    .unwrap();
     assert_eq!(metadata.files.len(), 1);
     assert_eq!(metadata.files[0].path, "test.txt");
     assert_eq!(metadata.files[0].size, 14);
@@ -49,16 +46,13 @@ fn sample_000_extract() {
 
 #[test]
 fn sample_001_metadata() {
-    let metadata = match *archive::metadata(
+    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/001.zip".to_string(),
         true,
         1024,
     )
-    .unwrap()
-    {
-        OriginalArchiveMetadata::Zip(metadata) => metadata,
-    };
+    .unwrap();
     assert_eq!(metadata.files.len(), 2);
     assert_eq!(metadata.files[0].path, "test.txt");
     assert_eq!(metadata.files[0].size, 14);
@@ -103,16 +97,13 @@ fn sample_001_extract() {
 
 #[test]
 fn sample_002_metadata() {
-    let metadata = match *archive::metadata(
+    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/002.zip".to_string(),
         true,
         1024,
     )
-    .unwrap()
-    {
-        OriginalArchiveMetadata::Zip(metadata) => metadata,
-    };
+    .unwrap();
     assert_eq!(metadata.files.len(), 3);
     assert_eq!(metadata.files[0].path, "test/");
     assert_eq!(metadata.files[0].size, 0);
@@ -176,7 +167,7 @@ fn create_000_metadata() {
     archive::create(
         Formats::Zip,
         "tests/samples/zip/c000-external.zip".to_string(),
-        &mut vec![EntrySource {
+        &mut [EntrySource {
             path: "test.txt".to_string(),
             source: &mut FsFile::new(&"tests/samples/zip/c000-external/test.txt".to_string()),
         }],
@@ -186,16 +177,13 @@ fn create_000_metadata() {
 
     std::fs::remove_dir_all("tests/samples/zip/c000-external").unwrap();
 
-    let metadata = match *archive::metadata(
+    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/c000-external.zip".to_string(),
         true,
         1024,
     )
-    .unwrap()
-    {
-        OriginalArchiveMetadata::Zip(metadata) => metadata,
-    };
+    .unwrap();
 
     assert_eq!(metadata.files.len(), 1);
     assert_eq!(metadata.files[0].path, "test.txt");
@@ -227,7 +215,7 @@ fn create_000_extract() {
     archive::create(
         Formats::Zip,
         "tests/samples/zip/c000-external2.zip".to_string(),
-        &mut vec![EntrySource {
+        &mut [EntrySource {
             path: "test.txt".to_string(),
             source: &mut FsFile::new(&"tests/samples/zip/c000-external2/test.txt".to_string()),
         }],
