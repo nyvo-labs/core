@@ -13,8 +13,8 @@ jobs:
         with:
           toolchain: nightly
           override: true
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
+      - name: Install cargo-audit and clippy
+        run: cargo install cargo-audit cargo-clippy
       - name: Build
         run: cargo build --verbose
       - name: Run tests
