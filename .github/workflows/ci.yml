@@ -1,18 +1,25 @@
-name: Run integration tests
+name: Run CI
 on: [push, pull_request]
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
       - name: Build
         run: cargo build --verbose
       - name: Run tests
         run: cargo test --verbose
+      - name: Run clippy
+        run: cargo clippy --verbose
+      - name: Run audit
+        run: cargo audit
