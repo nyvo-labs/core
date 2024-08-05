@@ -89,7 +89,7 @@ fn parse_header(file: &mut FileReader) -> Header {
     let extra_size = if flags.extra_area { file.read_vu7() } else { 0 };
     let data_size = if flags.data_area { file.read_vu7() } else { 0 };
     match header_type {
-        0 => {
+        1 => {
             file.jump(&(extra_size as i128));
             file.jump(&(data_size as i128));
             Header {
@@ -130,6 +130,6 @@ fn parse_header(file: &mut FileReader) -> Header {
                 flags,
             }
         }
-        _ => panic!("Unknown header type"),
+        _ => panic!("Unknown header type {}", header_type),
     }
 }
