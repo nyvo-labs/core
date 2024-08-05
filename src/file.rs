@@ -237,8 +237,8 @@ impl<'a> FileReader {
         u128::from_be_bytes(buf)
     }
 
-    pub fn read_vint(&mut self) -> u128 {
-        // as defined in the RAR 5.0 spec
+    pub fn read_vu7(&mut self) -> u128 {
+        // referred to as vint in the RAR 5.0 spec
         let mut result = 0;
         let mut shift = 0u16;
         loop {
@@ -384,8 +384,7 @@ impl<'a> FileWriter {
         self.write(&n.to_be_bytes());
     }
 
-    pub fn write_vint(&mut self, n: &u128) {
-        // as defined in the RAR 5.0 spec
+    pub fn write_vu7(&mut self, n: &u128) {
         let mut n = *n;
         loop {
             let mut byte = (n & 0x7F) as u8;
