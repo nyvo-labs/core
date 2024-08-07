@@ -1,4 +1,4 @@
-use crate::{file::FileReader, helpers::hash::crc32};
+use crate::file::FileReader;
 
 use super::{RarArchiveMetadata, RarEncryption};
 
@@ -58,6 +58,26 @@ struct Header {
     flags: HeaderFlags,
 }
 
+struct Locator {
+    quick_open_offset: Option<u128>,
+    recovery_record_offset: Option<u128>,
+}
+
+struct Metadata {
+    name: Option<String>,
+    created: Option<u64>,
+}
+
+struct MainHeader {
+    multivolume: bool,
+    volume: u128,
+    solid: bool,
+    has_recovery: bool,
+    locked: bool,
+    locator: Option<Locator>,
+    metadata: Option<Metadata>,
+}
+
 struct EncryptionHeader {
     algorithm: RarEncryption,
     kdf_count: u8,
@@ -66,7 +86,7 @@ struct EncryptionHeader {
 }
 
 enum HeaderType {
-    Main,
+    Main(MainHeader),
     Encryption(EncryptionHeader),
 }
 
@@ -90,10 +110,79 @@ fn parse_header(file: &mut FileReader) -> Header {
     let data_size = if flags.data_area { file.read_vu7() } else { 0 };
     match header_type {
         1 => {
-            file.jump(&(extra_size as i128));
+            let archive_flags = file.read_vu7();
+            let mut volume = 0;
+            if archive_flags & 0x2 != 0 {
+                volume = file.read_vu7();
+            }
+            let mut locator = None;
+            let mut metadata = None;
+            if flags.extra_area {
+                let start_offset = file.get_position();
+                let end = start_offset + (extra_size as u64);
+                while file.get_position() < end {
+                    let entry_size = file.read_vu7();
+                    let entry_type = file.read_vu7();
+                    match entry_type {
+                        1 => {
+                            let locator_flags = file.read_vu7();
+                            let mut quick_open_offset = None;
+                            if locator_flags & 0x1 != 0 {
+                                quick_open_offset = Some(file.read_vu7());
+                            }
+                            let mut recovery_record_offset = None;
+                            if locator_flags & 0x2 != 0 {
+                                recovery_record_offset = Some(file.read_vu7());
+                            }
+                            locator = Some(Locator {
+                                quick_open_offset,
+                                recovery_record_offset,
+                            });
+                        }
+                        2 => {
+                            let meta_flags = file.read_vu7();
+                            let name = if meta_flags & 0x1 != 0 {
+                                let name_length = file.read_vu7() as u64;
+                                Some(
+                                    file.read_utf8(&name_length)
+                                        .split('\0')
+                                        .collect::<Vec<&str>>()[0]
+                                        .to_string(),
+                                )
+                            } else {
+                                None
+                            };
+                            let created = if meta_flags & 0x2 != 0 {
+                                if meta_flags & 0x4 != 0 || meta_flags & 0x8 != 0 {
+                                    // TODO: Parse
+                                    Some(file.read_u64le())
+                                } else {
+                                    Some(file.read_u32le() as u64)
+                                }
+                            } else {
+                                None
+                            };
+                            metadata = Some(Metadata { name, created });
+                        }
+                        _ => {
+                            file.jump(&(entry_size as i128));
+                        }
+                    }
+                }
+            } else {
+                file.jump(&(extra_size as i128));
+            }
             file.jump(&(data_size as i128));
             Header {
-                header: HeaderType::Main,
+                header: HeaderType::Main(MainHeader {
+                    multivolume: archive_flags & 0x1 != 0,
+                    volume,
+                    solid: archive_flags & 0x4 != 0,
+                    has_recovery: archive_flags & 0x8 != 0,
+                    locked: archive_flags & 0x10 != 0,
+                    locator,
+                    metadata,
+                }),
                 checksum: crc,
                 offset: header_offset,
                 size,
