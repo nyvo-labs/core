@@ -96,15 +96,26 @@ struct MainHeader {
 
 #[derive(Debug)]
 struct FileHeader {
+    is_directory: bool,
     file_flags: u128,
-    size_uncompressed: u128,
+    size_uncompressed: Option<u128>,
+    size: u128,
     attributes: u128,
-    modified: u32,
-    checksum: u32,
+    modified: Option<u32>,
+    checksum: Option<u32>,
     compression_info: u128,
     created_with: u128,
     name: String,
     offset: u64,
+}
+
+#[derive(Debug)]
+struct ServiceHeader {
+    size_uncompressed: Option<u128>,
+    checksum: Option<u32>,
+    compression_info: u128,
+    created_with: u128,
+    name: String,
 }
 
 #[derive(Debug)]
@@ -124,6 +135,7 @@ struct EndHeader {
 enum HeaderType {
     Main(MainHeader),
     File(FileHeader),
+    Service(ServiceHeader),
     Encryption(EncryptionHeader),
     End(EndHeader),
 
@@ -233,21 +245,42 @@ fn parse_header(file: &mut FileReader) -> Header {
         }
         2 => {
             let file_flags = file.read_vu7();
-            let size_uncompressed = file.read_vu7();
+            let size_uncompressed = if file_flags & 0x8 == 0 {
+                Some(file.read_vu7())
+            } else {
+                None
+            };
             let attributes = file.read_vu7();
-            let modified = file.read_u32le();
-            let checksum = file.read_u32le();
-            let compression_info = file.read_vu7();
+            let modified = if file_flags & 0x2 != 0 {
+                Some(file.read_u32le())
+            } else {
+                None
+            };
+            let checksum = if file_flags & 0x4 != 0 {
+                Some(file.read_u32le())
+            } else {
+                None
+            };
+            let compression_info = file.read_vu7(); // TODO: Parse
             let created_with = file.read_vu7();
             let name_length = file.read_vu7() as u64;
-            let name = file.read_utf8(&name_length);
-            file.jump(&(extra_size as i128));
+            let name = file
+                .read_utf8(&name_length)
+                .split('\0')
+                .collect::<Vec<&str>>()[0]
+                .to_string();
+            let mut size = size_uncompressed.unwrap_or(0);
+            if extra_size > 0 {
+                size = file.read_vu7();
+            }
             let file_offset = file.get_position();
-            file.jump(&(data_size as i128));
+            file.jump(&(data_size as i128)); // TODO: parse records
             Header {
                 header: HeaderType::File(FileHeader {
+                    is_directory: file_flags & 0x1 != 0,
                     file_flags,
                     size_uncompressed,
+                    size,
                     attributes,
                     modified,
                     checksum,
@@ -255,6 +288,44 @@ fn parse_header(file: &mut FileReader) -> Header {
                     created_with,
                     name,
                     offset: file_offset,
+                }),
+                checksum: crc,
+                offset: header_offset,
+                size,
+                extra_size,
+                data_size,
+                flags,
+            }
+        }
+        3 => {
+            let service_flags = file.read_vu7();
+            let size_uncompressed = if service_flags & 0x8 == 0 {
+                Some(file.read_vu7())
+            } else {
+                None
+            };
+            file.read_vu7();
+            if service_flags & 0x2 != 0 {
+                file.jump(&4);
+            }
+            let checksum = if service_flags & 0x4 != 0 {
+                Some(file.read_u32le())
+            } else {
+                None
+            };
+            let compression_info = file.read_vu7(); // TODO: Parse
+            let created_with = file.read_vu7();
+            let name_length = file.read_vu7() as u64;
+            let name = file.read_utf8(&name_length);
+            file.jump(&(extra_size as i128));
+            file.jump(&(data_size as i128)); // TODO: parse records
+            Header {
+                header: HeaderType::Service(ServiceHeader {
+                    size_uncompressed,
+                    checksum,
+                    compression_info,
+                    created_with,
+                    name,
                 }),
                 checksum: crc,
                 offset: header_offset,
