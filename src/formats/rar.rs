@@ -12,6 +12,7 @@ pub struct RarFileEntry {
     pub path: String,
 }
 
+#[derive(Debug)]
 pub enum RarEncryption {
     Aes256,
 }

@@ -27,7 +27,18 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
 
     // TODO: Encryption
 
-    parse_header(file);
+    let mut headers = vec![];
+
+    let file_size = file.get_size();
+    while file.get_position() < file_size {
+        headers.push(parse_header(file));
+    }
+
+    let encrypted = matches!(headers[0].header, HeaderType::Encryption(_));
+
+    let main_header = if encrypted { &headers[1] } else { &headers[0] };
+
+    println!("{:?}", headers);
 
     RarArchiveMetadata {
         files: vec![],
@@ -36,6 +47,7 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
     }
 }
 
+#[derive(Debug)]
 struct HeaderFlags {
     extra_area: bool,
     data_area: bool,
@@ -48,6 +60,7 @@ struct HeaderFlags {
     raw: u128,
 }
 
+#[derive(Debug)]
 struct Header {
     header: HeaderType,
     checksum: u32,
@@ -58,16 +71,19 @@ struct Header {
     flags: HeaderFlags,
 }
 
+#[derive(Debug)]
 struct Locator {
     quick_open_offset: Option<u128>,
     recovery_record_offset: Option<u128>,
 }
 
+#[derive(Debug)]
 struct Metadata {
     name: Option<String>,
     created: Option<u64>,
 }
 
+#[derive(Debug)]
 struct MainHeader {
     multivolume: bool,
     volume: u128,
@@ -78,6 +94,20 @@ struct MainHeader {
     metadata: Option<Metadata>,
 }
 
+#[derive(Debug)]
+struct FileHeader {
+    file_flags: u128,
+    size_uncompressed: u128,
+    attributes: u128,
+    modified: u32,
+    checksum: u32,
+    compression_info: u128,
+    created_with: u128,
+    name: String,
+    offset: u64,
+}
+
+#[derive(Debug)]
 struct EncryptionHeader {
     algorithm: RarEncryption,
     kdf_count: u8,
@@ -85,15 +115,25 @@ struct EncryptionHeader {
     password_check_value: Option<(u64, u16)>,
 }
 
+#[derive(Debug)]
+struct EndHeader {
+    is_last_volume: bool,
+}
+
+#[derive(Debug)]
 enum HeaderType {
     Main(MainHeader),
+    File(FileHeader),
     Encryption(EncryptionHeader),
+    End(EndHeader),
+
+    Unknown(u128),
 }
 
 fn parse_header(file: &mut FileReader) -> Header {
     let crc = file.read_u32le();
-    let header_offset = file.get_position();
     let size = file.read_vu7();
+    let header_offset = file.get_position();
     let header_type = file.read_vu7();
     let flags = file.read_vu7();
     let flags = HeaderFlags {
@@ -191,6 +231,39 @@ fn parse_header(file: &mut FileReader) -> Header {
                 flags,
             }
         }
+        2 => {
+            let file_flags = file.read_vu7();
+            let size_uncompressed = file.read_vu7();
+            let attributes = file.read_vu7();
+            let modified = file.read_u32le();
+            let checksum = file.read_u32le();
+            let compression_info = file.read_vu7();
+            let created_with = file.read_vu7();
+            let name_length = file.read_vu7() as u64;
+            let name = file.read_utf8(&name_length);
+            file.jump(&(extra_size as i128));
+            let file_offset = file.get_position();
+            file.jump(&(data_size as i128));
+            Header {
+                header: HeaderType::File(FileHeader {
+                    file_flags,
+                    size_uncompressed,
+                    attributes,
+                    modified,
+                    checksum,
+                    compression_info,
+                    created_with,
+                    name,
+                    offset: file_offset,
+                }),
+                checksum: crc,
+                offset: header_offset,
+                size,
+                extra_size,
+                data_size,
+                flags,
+            }
+        }
         4 => {
             let algorithm = match file.read_vu7() {
                 0 => RarEncryption::Aes256,
@@ -204,6 +277,8 @@ fn parse_header(file: &mut FileReader) -> Header {
             } else {
                 None
             };
+            file.jump(&(extra_size as i128));
+            file.jump(&(data_size as i128));
             Header {
                 header: HeaderType::Encryption(EncryptionHeader {
                     algorithm,
@@ -219,6 +294,30 @@ fn parse_header(file: &mut FileReader) -> Header {
                 flags,
             }
         }
-        _ => panic!("Unknown header type {}", header_type),
+        5 => Header {
+            header: HeaderType::End(EndHeader {
+                is_last_volume: file.read_vu7() & 0x1 == 0,
+            }),
+            checksum: crc,
+            offset: header_offset,
+            size,
+            extra_size,
+            data_size,
+            flags,
+        },
+        _ => {
+            file.jump(&(size as i128));
+            file.jump(&(extra_size as i128));
+            file.jump(&(data_size as i128));
+            Header {
+                header: HeaderType::Unknown(header_type),
+                checksum: crc,
+                offset: header_offset,
+                size,
+                extra_size,
+                data_size,
+                flags,
+            }
+        }
     }
 }
