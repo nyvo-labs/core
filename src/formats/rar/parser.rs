@@ -1,6 +1,8 @@
-use crate::file::FileReader;
+use chrono::DateTime;
 
-use super::{RarArchiveMetadata, RarEncryption};
+use crate::{file::FileReader, helpers::hash::crc32};
+
+use super::{RarArchiveMetadata, RarEncryption, RarFileEntry};
 
 pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
     let mut i = 0;
@@ -36,15 +38,72 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
 
     let encrypted = matches!(headers[0].header, HeaderType::Encryption(_));
 
-    let main_header = if encrypted { &headers[1] } else { &headers[0] };
+    let main_header = match if encrypted {
+        &headers[1].header
+    } else {
+        &headers[0].header
+    } {
+        HeaderType::Main(header) => header,
+        _ => panic!("Invalid RAR file"),
+    };
 
-    println!("{:?}", headers);
+    let files: Vec<RarFileEntry> = headers
+        .iter()
+        .filter_map(|header| match &header.header {
+            HeaderType::File(file) => Some(file),
+            _ => None,
+        })
+        .map(|file| RarFileEntry {
+            path: file.name.clone(),
+            offset: file.offset,
+            size: file.size as u64,
+            uncompressed_size: file.size_uncompressed.map(|size| size as u64),
+            is_directory: file.is_directory,
+            modified: DateTime::from_timestamp(0, 0), // TODO
+            checksum: file.checksum,
+            encryption: None,        // TODO
+            compression: None,       // TODO
+            creation_platform: None, // TODO
+        })
+        .collect();
+
+    let locator = main_header.locator.as_ref().unwrap();
+    let qo_offset = locator.quick_open_offset.map(|offset| offset as u64);
+    let rr_offset = locator.recovery_record_offset.map(|offset| offset as u64);
 
     RarArchiveMetadata {
-        files: vec![],
+        files,
         archive_start: i,
         version: (maj_version, min_version),
+        multivolume: main_header.multivolume,
+        volume: main_header.volume,
+        solid: main_header.solid,
+        has_recovery: main_header.has_recovery,
+        locked: main_header.locked,
+        original_name: main_header
+            .metadata
+            .as_ref()
+            .and_then(|meta| meta.name.clone()),
+        created: DateTime::from_timestamp(0, 0), // TODO
+        qo_offset,
+        rr_offset,
     }
+}
+
+pub fn get_file(file: &mut FileReader, entry: &RarFileEntry) -> Vec<u8> {
+    file.seek(&entry.offset);
+    file.read_u8array(&entry.size)
+}
+
+pub fn check_integrity(
+    source: &mut FileReader,
+    file: &RarFileEntry,
+    buffer_size: &u64,
+) -> Option<bool> {
+    let checksum = file.checksum?;
+
+    let hash = crc32::hash(source, &file.offset, &file.size, buffer_size);
+    Some(hash == checksum)
 }
 
 #[derive(Debug)]
