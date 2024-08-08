@@ -38,7 +38,12 @@ pub enum RarEncryption {
 }
 
 #[derive(Debug)]
-pub enum RarCompression {}
+pub struct RarCompression {
+    pub version: u8,
+    pub solid: bool,
+    pub method: u8,
+    pub dict_size: u64,
+}
 
 #[derive(Debug)]
 pub enum RarPlatform {

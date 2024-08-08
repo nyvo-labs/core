@@ -1,6 +1,10 @@
 use chrono::DateTime;
 
-use crate::{file::FileReader, helpers::hash::crc32};
+use crate::{
+    file::FileReader,
+    formats::rar::{RarCompression, RarPlatform},
+    helpers::hash::crc32,
+};
 
 use super::{RarArchiveMetadata, RarEncryption, RarFileEntry};
 
@@ -53,17 +57,40 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
             HeaderType::File(file) => Some(file),
             _ => None,
         })
-        .map(|file| RarFileEntry {
-            path: file.name.clone(),
-            offset: file.offset,
-            size: file.size as u64,
-            uncompressed_size: file.size_uncompressed.map(|size| size as u64),
-            is_directory: file.is_directory,
-            modified: DateTime::from_timestamp(0, 0), // TODO
-            checksum: file.checksum,
-            encryption: None,        // TODO
-            compression: None,       // TODO
-            creation_platform: None, // TODO
+        .map(|file| {
+            let dict_size = ((file.compression_info & 0x7c00) >> 10) as u64;
+            let dict_size_add = ((file.compression_info & 0x7c00) >> 10) as u64;
+            let compression = RarCompression {
+                version: (file.compression_info & 0x3f) as u8,
+                solid: file.compression_info & 0x40 != 0,
+                method: ((file.compression_info & 0x380) >> 7) as u8,
+                dict_size: (dict_size
+                    + if dict_size_add > 0 {
+                        (dict_size * dict_size_add) / 32
+                    } else {
+                        0
+                    }),
+            };
+            RarFileEntry {
+                path: file.name.clone(),
+                offset: file.offset,
+                size: file.size as u64,
+                uncompressed_size: file.size_uncompressed.map(|size| size as u64),
+                is_directory: file.is_directory,
+                modified: DateTime::from_timestamp(0, 0), // TODO
+                checksum: file.checksum,
+                encryption: None, // TODO
+                compression: if compression.method > 0 {
+                    Some(compression)
+                } else {
+                    None
+                },
+                creation_platform: match file.created_with {
+                    0 => Some(RarPlatform::Windows),
+                    1 => Some(RarPlatform::Unix),
+                    _ => None,
+                },
+            }
         })
         .collect();
 
@@ -90,20 +117,29 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
     }
 }
 
-pub fn get_file(file: &mut FileReader, entry: &RarFileEntry) -> Vec<u8> {
+pub fn get_file(file: &mut FileReader, entry: &RarFileEntry) -> Result<Vec<u8>, String> {
+    if entry.compression.is_some() {
+        return Err("Compressed RAR files are not supported yet.".to_string());
+    }
     file.seek(&entry.offset);
-    file.read_u8array(&entry.size)
+    Ok(file.read_u8array(&entry.size))
 }
 
 pub fn check_integrity(
     source: &mut FileReader,
     file: &RarFileEntry,
     buffer_size: &u64,
-) -> Option<bool> {
-    let checksum = file.checksum?;
+) -> Result<Option<bool>, String> {
+    if file.compression.is_some() {
+        return Err("Compressed RAR files are not supported yet.".to_string());
+    }
+    let checksum = match file.checksum {
+        Some(checksum) => checksum,
+        None => return Ok(None),
+    };
 
     let hash = crc32::hash(source, &file.offset, &file.size, buffer_size);
-    Some(hash == checksum)
+    Ok(Some(hash == checksum))
 }
 
 #[derive(Debug)]
