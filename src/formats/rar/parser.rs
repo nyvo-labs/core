@@ -3,7 +3,7 @@ use chrono::DateTime;
 use crate::{
     file::FileReader,
     formats::rar::{RarCompression, RarPlatform},
-    helpers::hash::crc32,
+    helpers::{datetime::filetime, hash::crc32},
 };
 
 use super::{RarArchiveMetadata, RarEncryption, RarFileEntry};
@@ -41,13 +41,29 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
     }
 
     let encrypted = matches!(headers[0].header, HeaderType::Encryption(_));
-
-    let main_header = match if encrypted {
-        &headers[1].header
+    let encryption_header = if encrypted {
+        match headers.remove(0).header {
+            // TODO: remove has O(n) complexity, should be optimized
+            HeaderType::Encryption(header) => Some(header),
+            _ => None,
+        }
     } else {
-        &headers[0].header
-    } {
+        None
+    };
+
+    let main_header = match &(if encrypted {
+        headers.get(1).unwrap()
+    } else {
+        &headers[0]
+    })
+    .header
+    {
         HeaderType::Main(header) => header,
+        _ => panic!("Invalid RAR file"),
+    };
+
+    let end_header = match &headers.last().unwrap().header {
+        HeaderType::End(header) => header,
         _ => panic!("Invalid RAR file"),
     };
 
@@ -111,9 +127,14 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
             .metadata
             .as_ref()
             .and_then(|meta| meta.name.clone()),
-        created: DateTime::from_timestamp(0, 0), // TODO
+        created: main_header
+            .metadata
+            .as_ref()
+            .map(|meta| filetime::parse(&meta.created.unwrap())), // TODO
         qo_offset,
         rr_offset,
+        encryption_header,
+        is_last: end_header.is_last_volume,
     }
 }
 
@@ -146,24 +167,25 @@ pub fn check_integrity(
 struct HeaderFlags {
     extra_area: bool,
     data_area: bool,
-    skip_when_unknown: bool,
+    // nobody needs these yet
+    /*skip_when_unknown: bool,
     continues_prev: bool,
     continues_next: bool,
     depends_on_prev: bool,
     preserve_child: bool,
 
-    raw: u128,
+    raw: u128,*/
 }
 
 #[derive(Debug)]
 struct Header {
     header: HeaderType,
-    checksum: u32,
+    /* checksum: u32,
     offset: u64,
     size: u128,
     extra_size: u128,
     data_size: u128,
-    flags: HeaderFlags,
+    flags: HeaderFlags, */
 }
 
 #[derive(Debug)]
@@ -173,7 +195,7 @@ struct Locator {
 }
 
 #[derive(Debug)]
-struct Metadata {
+pub struct Metadata {
     name: Option<String>,
     created: Option<u64>,
 }
@@ -192,11 +214,11 @@ struct MainHeader {
 #[derive(Debug)]
 struct FileHeader {
     is_directory: bool,
-    file_flags: u128,
+    //file_flags: u128,
     size_uncompressed: Option<u128>,
     size: u128,
-    attributes: u128,
-    modified: Option<u32>,
+    //attributes: u128,
+    //modified: Option<u32>,
     checksum: Option<u32>,
     compression_info: u128,
     created_with: u128,
@@ -206,19 +228,19 @@ struct FileHeader {
 
 #[derive(Debug)]
 struct ServiceHeader {
-    size_uncompressed: Option<u128>,
+    /* size_uncompressed: Option<u128>,
     checksum: Option<u32>,
     compression_info: u128,
     created_with: u128,
-    name: String,
+    name: String, */
 }
 
 #[derive(Debug)]
-struct EncryptionHeader {
-    algorithm: RarEncryption,
+pub struct EncryptionHeader {
+    /* algorithm: RarEncryption,
     kdf_count: u8,
     salt: u128,
-    password_check_value: Option<(u64, u16)>,
+    password_check_value: Option<(u64, u16)>, */
 }
 
 #[derive(Debug)]
@@ -234,24 +256,26 @@ enum HeaderType {
     Encryption(EncryptionHeader),
     End(EndHeader),
 
-    Unknown(u128),
+    Unknown(/* u128 */),
 }
 
 fn parse_header(file: &mut FileReader) -> Header {
     let crc = file.read_u32le();
+    println!("{:?}", crc);
     let size = file.read_vu7();
     let header_offset = file.get_position();
+    println!("{:?}", header_offset);
     let header_type = file.read_vu7();
     let flags = file.read_vu7();
     let flags = HeaderFlags {
         extra_area: flags & 0x1 != 0,
         data_area: flags & 0x2 != 0,
-        skip_when_unknown: flags & 0x4 != 0,
+        /*skip_when_unknown: flags & 0x4 != 0,
         continues_prev: flags & 0x8 != 0,
         continues_next: flags & 0x10 != 0,
         depends_on_prev: flags & 0x20 != 0,
         preserve_child: flags & 0x40 != 0,
-        raw: flags,
+        raw: flags,*/
     };
     let extra_size = if flags.extra_area { file.read_vu7() } else { 0 };
     let data_size = if flags.data_area { file.read_vu7() } else { 0 };
@@ -330,12 +354,12 @@ fn parse_header(file: &mut FileReader) -> Header {
                     locator,
                     metadata,
                 }),
-                checksum: crc,
+                /* checksum: crc,
                 offset: header_offset,
                 size,
                 extra_size,
                 data_size,
-                flags,
+                flags, */
             }
         }
         2 => {
@@ -346,11 +370,13 @@ fn parse_header(file: &mut FileReader) -> Header {
                 None
             };
             let attributes = file.read_vu7();
+            println!("{:?}", attributes);
             let modified = if file_flags & 0x2 != 0 {
                 Some(file.read_u32le())
             } else {
                 None
             };
+            println!("{:?}", modified);
             let checksum = if file_flags & 0x4 != 0 {
                 Some(file.read_u32le())
             } else {
@@ -373,23 +399,23 @@ fn parse_header(file: &mut FileReader) -> Header {
             Header {
                 header: HeaderType::File(FileHeader {
                     is_directory: file_flags & 0x1 != 0,
-                    file_flags,
+                    //file_flags,
                     size_uncompressed,
                     size,
-                    attributes,
-                    modified,
+                    //attributes,
+                    //modified,
                     checksum,
                     compression_info,
                     created_with,
                     name,
                     offset: file_offset,
                 }),
-                checksum: crc,
+                /* checksum: crc,
                 offset: header_offset,
                 size,
                 extra_size,
                 data_size,
-                flags,
+                flags, */
             }
         }
         3 => {
@@ -399,6 +425,7 @@ fn parse_header(file: &mut FileReader) -> Header {
             } else {
                 None
             };
+            println!("{:?}", size_uncompressed);
             file.read_vu7();
             if service_flags & 0x2 != 0 {
                 file.jump(&4);
@@ -408,26 +435,30 @@ fn parse_header(file: &mut FileReader) -> Header {
             } else {
                 None
             };
+            println!("{:?}", checksum);
             let compression_info = file.read_vu7(); // TODO: Parse
+            println!("{:?}", compression_info);
             let created_with = file.read_vu7();
+            println!("{:?}", created_with);
             let name_length = file.read_vu7() as u64;
             let name = file.read_utf8(&name_length);
+            println!("{:?}", name);
             file.jump(&(extra_size as i128));
             file.jump(&(data_size as i128)); // TODO: parse records
             Header {
                 header: HeaderType::Service(ServiceHeader {
-                    size_uncompressed,
+                    /* size_uncompressed,
                     checksum,
                     compression_info,
                     created_with,
-                    name,
+                    name, */
                 }),
-                checksum: crc,
+                /* checksum: crc,
                 offset: header_offset,
                 size,
                 extra_size,
                 data_size,
-                flags,
+                flags, */
             }
         }
         4 => {
@@ -435,54 +466,58 @@ fn parse_header(file: &mut FileReader) -> Header {
                 0 => RarEncryption::Aes256,
                 _ => panic!("Unknown encryption algorithm"),
             };
+            println!("{:?}", algorithm);
             let enc_flags = file.read_vu7();
             let kdf_count = file.read_u8();
+            println!("{:?}", kdf_count);
             let salt = file.read_u128le();
+            println!("{:?}", salt);
             let password_check_value = if enc_flags & 0x1 != 0 {
                 Some((file.read_u64le(), file.read_u16le()))
             } else {
                 None
             };
+            println!("{:?}", password_check_value);
             file.jump(&(extra_size as i128));
             file.jump(&(data_size as i128));
             Header {
                 header: HeaderType::Encryption(EncryptionHeader {
-                    algorithm,
+                    /* algorithm,
                     kdf_count,
                     salt,
-                    password_check_value,
+                    password_check_value, */
                 }),
-                checksum: crc,
+                /* checksum: crc,
                 offset: header_offset,
                 size,
                 extra_size,
                 data_size,
-                flags,
+                flags, */
             }
         }
         5 => Header {
             header: HeaderType::End(EndHeader {
                 is_last_volume: file.read_vu7() & 0x1 == 0,
             }),
-            checksum: crc,
+            /* checksum: crc,
             offset: header_offset,
             size,
             extra_size,
             data_size,
-            flags,
+            flags, */
         },
         _ => {
             file.jump(&(size as i128));
             file.jump(&(extra_size as i128));
             file.jump(&(data_size as i128));
             Header {
-                header: HeaderType::Unknown(header_type),
-                checksum: crc,
+                header: HeaderType::Unknown(/* header_type */),
+                /* checksum: crc,
                 offset: header_offset,
                 size,
                 extra_size,
                 data_size,
-                flags,
+                flags, */
             }
         }
     }

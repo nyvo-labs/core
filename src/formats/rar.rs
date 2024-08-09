@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 
 pub mod parser;
 
+use parser::EncryptionHeader;
+
 #[derive(Debug)]
 pub struct RarArchiveMetadata {
     pub files: Vec<RarFileEntry>,
@@ -16,6 +18,8 @@ pub struct RarArchiveMetadata {
     pub created: Option<DateTime<Utc>>,
     pub qo_offset: Option<u64>,
     pub rr_offset: Option<u64>,
+    pub encryption_header: Option<EncryptionHeader>,
+    pub is_last: bool,
 }
 
 #[derive(Debug)]
