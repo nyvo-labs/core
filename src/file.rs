@@ -98,6 +98,13 @@ impl<'a> FileReader {
         }
     }
 
+    pub fn set_end(&mut self, end: &u64) -> LimitedFileReader {
+        LimitedFileReader {
+            file: self,
+            end: *end,
+        }
+    }
+
     pub fn close(self) {
         self.file.sync_all().unwrap();
         drop(self);
@@ -261,6 +268,23 @@ impl Clone for FileReader {
             file: OpenOptions::new().read(true).open(&self.path).unwrap(),
             pos: self.pos,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct LimitedFileReader<'a> {
+    file: &'a mut FileReader,
+    end: u64,
+}
+
+impl Read for LimitedFileReader<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.file.get_position() >= self.end {
+            return Ok(0);
+        }
+        let to_read = min(buf.len(), (self.end - self.file.get_position()) as usize);
+        let read = self.file.read(&mut buf[..to_read]);
+        Ok(read.len())
     }
 }
 

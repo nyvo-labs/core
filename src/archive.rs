@@ -60,6 +60,7 @@ pub fn metadata<'a>(
             };
             OriginalArchiveMetadata::Rar(metadata)
         }
+        Formats::Hssp => todo!(),
     };
 
     Ok(Box::new(metadata))
@@ -110,6 +111,7 @@ pub fn extract(
             };
             &metadata.clone() as &dyn ArchiveMetadata
         }
+        Formats::Hssp => todo!(),
     };
 
     let files = metadata.get_files();
@@ -128,6 +130,7 @@ pub fn extract(
                     format!("{}/{}", &output, &path)
                 });
             }
+            Formats::Hssp => todo!(),
         }
     } else if index.is_some() {
         let index = index.unwrap();
@@ -147,6 +150,7 @@ pub fn extract(
                 &buffer_size,
                 &|path| format!("{}/{}", &output, &path),
             ),
+            Formats::Hssp => todo!(),
         };
     } else {
         let path = path.unwrap();
@@ -183,6 +187,7 @@ pub fn extract(
                     format!("{}/{}", &output, &path)
                 });
             }
+            Formats::Hssp => todo!(),
         }
     };
 
