@@ -7,7 +7,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 
-use crate::formats::zip::ZipFileEntry;
+use crate::formats::{rar::RarFileEntry, zip::ZipFileEntry};
 
 pub struct FsFile {
     pub size: u64,
@@ -59,6 +59,7 @@ pub trait File {
 
 pub enum OriginalFileEntry<'a> {
     Zip(&'a ZipFileEntry<'a>),
+    Rar(&'a RarFileEntry),
 }
 
 pub trait FileEntry<'a> {
@@ -236,6 +237,21 @@ impl<'a> FileReader {
         self.read(&mut buf);
         u128::from_be_bytes(buf)
     }
+
+    pub fn read_vu7(&mut self) -> u128 {
+        // referred to as vint in the RAR 5.0 spec
+        let mut result = 0;
+        let mut shift = 0u16;
+        loop {
+            let byte = self.read_u8();
+            result |= ((byte & 0x7F) as u128) << shift;
+            if byte & 0x80 == 0 {
+                break;
+            }
+            shift += 7;
+        }
+        result
+    }
 }
 
 impl Clone for FileReader {
@@ -367,5 +383,20 @@ impl<'a> FileWriter {
 
     pub fn write_u128be(&mut self, n: &u128) {
         self.write(&n.to_be_bytes());
+    }
+
+    pub fn write_vu7(&mut self, n: &u128) {
+        let mut n = *n;
+        loop {
+            let mut byte = (n & 0x7F) as u8;
+            n >>= 7;
+            if n != 0 {
+                byte |= 0x80;
+            }
+            self.write(&[byte]);
+            if n == 0 {
+                break;
+            }
+        }
     }
 }
