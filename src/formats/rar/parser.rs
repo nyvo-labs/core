@@ -1,7 +1,7 @@
 use chrono::DateTime;
 
 use crate::{
-    file::FileReader,
+    file::{FileReader, FileWriter},
     formats::rar::{RarCompression, RarPlatform},
     helpers::{datetime::filetime, hash::crc32},
 };
@@ -135,6 +135,7 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
         rr_offset,
         encryption_header,
         is_last: end_header.is_last_volume,
+        headers,
     }
 }
 
@@ -144,6 +145,32 @@ pub fn get_file(file: &mut FileReader, entry: &RarFileEntry) -> Result<Vec<u8>, 
     }
     file.seek(&entry.offset);
     Ok(file.read_u8array(&entry.size))
+}
+
+pub fn extract(
+    file: &mut FileReader,
+    entries: &Vec<RarFileEntry>,
+    buffer_size: &u64,
+    path_rewriter: &dyn Fn(&String) -> String,
+) {
+    for entry in entries {
+        if entry.compression.is_some() {
+            panic!("Compressed RAR files are not supported yet.");
+        }
+        let path = path_rewriter(&entry.path);
+        if !entry.is_directory {
+            let mut target = FileWriter::new(&path, &false);
+            file.export(
+                &entry.offset,
+                &entry.size,
+                &mut target,
+                &entry.modified.unwrap(),
+                buffer_size,
+            );
+        } else {
+            std::fs::create_dir_all(path).unwrap();
+        };
+    }
 }
 
 pub fn check_integrity(
@@ -163,6 +190,41 @@ pub fn check_integrity(
     Ok(Some(hash == checksum))
 }
 
+pub fn check_integrity_all(
+    source: &mut FileReader,
+    files: &Vec<RarFileEntry>,
+    buffer_size: &u64,
+) -> bool {
+    for file in files {
+        if !check_integrity(source, file, buffer_size)
+            .unwrap()
+            .unwrap_or(true)
+        {
+            return false;
+        }
+    }
+    true
+}
+
+pub fn check_integrity_headers(
+    source: &mut FileReader,
+    metadata: &RarArchiveMetadata,
+    buffer_size: &u64,
+) -> bool {
+    for header in &metadata.headers {
+        let hash = crc32::hash(source, &header.offset, &(header.size as u64), buffer_size);
+        if hash != header.checksum {
+            return false;
+        }
+    }
+    let eh = metadata.encryption_header.as_ref().unwrap();
+    let hash = crc32::hash(source, &eh.offset, &(eh.size as u64), buffer_size);
+    if hash != eh.checksum {
+        return false;
+    }
+    true
+}
+
 #[derive(Debug)]
 struct HeaderFlags {
     extra_area: bool,
@@ -178,14 +240,28 @@ struct HeaderFlags {
 }
 
 #[derive(Debug)]
-struct Header {
+pub struct Header {
     header: HeaderType,
-    /* checksum: u32,
+    checksum: u32,
     offset: u64,
     size: u128,
-    extra_size: u128,
+    /*extra_size: u128,
     data_size: u128,
     flags: HeaderFlags, */
+}
+
+impl Clone for Header {
+    fn clone(&self) -> Self {
+        Header {
+            header: self.header.clone(),
+            checksum: self.checksum,
+            offset: self.offset,
+            size: self.size,
+            /*extra_size: self.extra_size,
+            data_size: self.data_size,
+            flags: self.flags, */
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -194,10 +270,28 @@ struct Locator {
     recovery_record_offset: Option<u128>,
 }
 
+impl Clone for Locator {
+    fn clone(&self) -> Self {
+        Locator {
+            quick_open_offset: self.quick_open_offset,
+            recovery_record_offset: self.recovery_record_offset,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Metadata {
     name: Option<String>,
     created: Option<u64>,
+}
+
+impl Clone for Metadata {
+    fn clone(&self) -> Self {
+        Metadata {
+            name: self.name.clone(),
+            created: self.created,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -209,6 +303,20 @@ struct MainHeader {
     locked: bool,
     locator: Option<Locator>,
     metadata: Option<Metadata>,
+}
+
+impl Clone for MainHeader {
+    fn clone(&self) -> Self {
+        MainHeader {
+            multivolume: self.multivolume,
+            volume: self.volume,
+            solid: self.solid,
+            has_recovery: self.has_recovery,
+            locked: self.locked,
+            locator: self.locator.clone(),
+            metadata: self.metadata.clone(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -226,6 +334,24 @@ struct FileHeader {
     offset: u64,
 }
 
+impl Clone for FileHeader {
+    fn clone(&self) -> Self {
+        FileHeader {
+            is_directory: self.is_directory,
+            //file_flags: self.file_flags,
+            size_uncompressed: self.size_uncompressed,
+            size: self.size,
+            //attributes: self.attributes,
+            //modified: self.modified,
+            checksum: self.checksum,
+            compression_info: self.compression_info,
+            created_with: self.created_with,
+            name: self.name.clone(),
+            offset: self.offset,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct ServiceHeader {
     /* size_uncompressed: Option<u128>,
@@ -235,17 +361,54 @@ struct ServiceHeader {
     name: String, */
 }
 
+impl Clone for ServiceHeader {
+    fn clone(&self) -> Self {
+        ServiceHeader {
+            /* size_uncompressed: self.size_uncompressed,
+            checksum: self.checksum,
+            compression_info: self.compression_info,
+            created_with: self.created_with,
+            name: self.name, */
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct EncryptionHeader {
     /* algorithm: RarEncryption,
     kdf_count: u8,
     salt: u128,
     password_check_value: Option<(u64, u16)>, */
+    checksum: u32,
+    offset: u64,
+    size: u128,
+}
+
+impl Clone for EncryptionHeader {
+    fn clone(&self) -> Self {
+        EncryptionHeader {
+            /* algorithm: self.algorithm,
+            kdf_count: self.kdf_count,
+            salt: self.salt,
+            password_check_value: self.password_check_value, */
+            checksum: self.checksum,
+            offset: self.offset,
+            size: self.size,
+        }
+    }
 }
 
 #[derive(Debug)]
 struct EndHeader {
     is_last_volume: bool,
+}
+
+impl Clone for EndHeader {
+    fn clone(&self) -> Self {
+        EndHeader {
+            is_last_volume: self.is_last_volume,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -259,12 +422,23 @@ enum HeaderType {
     Unknown(/* u128 */),
 }
 
+impl Clone for HeaderType {
+    fn clone(&self) -> Self {
+        match self {
+            HeaderType::Main(header) => HeaderType::Main(header.clone()),
+            HeaderType::File(header) => HeaderType::File(header.clone()),
+            HeaderType::Service(header) => HeaderType::Service(header.clone()),
+            HeaderType::Encryption(header) => HeaderType::Encryption(header.clone()),
+            HeaderType::End(header) => HeaderType::End(header.clone()),
+            HeaderType::Unknown(/* header_type */) => HeaderType::Unknown(/* header_type */),
+        }
+    }
+}
+
 fn parse_header(file: &mut FileReader) -> Header {
     let crc = file.read_u32le();
-    println!("{:?}", crc);
     let size = file.read_vu7();
     let header_offset = file.get_position();
-    println!("{:?}", header_offset);
     let header_type = file.read_vu7();
     let flags = file.read_vu7();
     let flags = HeaderFlags {
@@ -354,10 +528,10 @@ fn parse_header(file: &mut FileReader) -> Header {
                     locator,
                     metadata,
                 }),
-                /* checksum: crc,
+                checksum: crc,
                 offset: header_offset,
                 size,
-                extra_size,
+                /* extra_size,
                 data_size,
                 flags, */
             }
@@ -410,10 +584,10 @@ fn parse_header(file: &mut FileReader) -> Header {
                     name,
                     offset: file_offset,
                 }),
-                /* checksum: crc,
+                checksum: crc,
                 offset: header_offset,
                 size,
-                extra_size,
+                /*extra_size,
                 data_size,
                 flags, */
             }
@@ -453,10 +627,10 @@ fn parse_header(file: &mut FileReader) -> Header {
                     created_with,
                     name, */
                 }),
-                /* checksum: crc,
+                checksum: crc,
                 offset: header_offset,
                 size,
-                extra_size,
+                /*extra_size,
                 data_size,
                 flags, */
             }
@@ -486,11 +660,14 @@ fn parse_header(file: &mut FileReader) -> Header {
                     kdf_count,
                     salt,
                     password_check_value, */
+                    checksum: crc,
+                    offset: header_offset,
+                    size,
                 }),
-                /* checksum: crc,
+                checksum: crc,
                 offset: header_offset,
                 size,
-                extra_size,
+                /*extra_size,
                 data_size,
                 flags, */
             }
@@ -499,10 +676,10 @@ fn parse_header(file: &mut FileReader) -> Header {
             header: HeaderType::End(EndHeader {
                 is_last_volume: file.read_vu7() & 0x1 == 0,
             }),
-            /* checksum: crc,
+            checksum: crc,
             offset: header_offset,
             size,
-            extra_size,
+            /*extra_size,
             data_size,
             flags, */
         },
@@ -512,10 +689,10 @@ fn parse_header(file: &mut FileReader) -> Header {
             file.jump(&(data_size as i128));
             Header {
                 header: HeaderType::Unknown(/* header_type */),
-                /* checksum: crc,
+                checksum: crc,
                 offset: header_offset,
                 size,
-                extra_size,
+                /*extra_size,
                 data_size,
                 flags, */
             }

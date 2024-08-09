@@ -6,13 +6,17 @@ use corelib::{
 
 #[test]
 fn sample_000_metadata() {
-    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
+    let metadata = match *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/000.zip".to_string(),
         true,
         1024,
     )
-    .unwrap();
+    .unwrap()
+    {
+        OriginalArchiveMetadata::Zip(metadata) => metadata,
+        _ => panic!("This could never happen, this is only here for type safety"),
+    };
     assert_eq!(metadata.files.len(), 1);
     assert_eq!(metadata.files[0].path, "test.txt");
     assert_eq!(metadata.files[0].size, 14);
@@ -46,13 +50,17 @@ fn sample_000_extract() {
 
 #[test]
 fn sample_001_metadata() {
-    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
+    let metadata = match *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/001.zip".to_string(),
         true,
         1024,
     )
-    .unwrap();
+    .unwrap()
+    {
+        OriginalArchiveMetadata::Zip(metadata) => metadata,
+        _ => panic!("This could never happen, this is only here for type safety"),
+    };
     assert_eq!(metadata.files.len(), 2);
     assert_eq!(metadata.files[0].path, "test.txt");
     assert_eq!(metadata.files[0].size, 14);
@@ -97,13 +105,17 @@ fn sample_001_extract() {
 
 #[test]
 fn sample_002_metadata() {
-    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
+    let metadata = match *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/002.zip".to_string(),
         true,
         1024,
     )
-    .unwrap();
+    .unwrap()
+    {
+        OriginalArchiveMetadata::Zip(metadata) => metadata,
+        _ => panic!("This could never happen, this is only here for type safety"),
+    };
     assert_eq!(metadata.files.len(), 3);
     assert_eq!(metadata.files[0].path, "test/");
     assert_eq!(metadata.files[0].size, 0);
@@ -177,13 +189,17 @@ fn create_000_metadata() {
 
     std::fs::remove_dir_all("tests/samples/zip/c000-external").unwrap();
 
-    let OriginalArchiveMetadata::Zip(metadata) = *archive::metadata(
+    let metadata = match *archive::metadata(
         Formats::Zip,
         "tests/samples/zip/c000-external.zip".to_string(),
         true,
         1024,
     )
-    .unwrap();
+    .unwrap()
+    {
+        OriginalArchiveMetadata::Zip(metadata) => metadata,
+        _ => panic!("This could never happen, this is only here for type safety"),
+    };
 
     assert_eq!(metadata.files.len(), 1);
     assert_eq!(metadata.files[0].path, "test.txt");

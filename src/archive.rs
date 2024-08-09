@@ -2,6 +2,7 @@ use crate::{
     file::{FileEntry, FileReader, FileWriter, FsFile},
     formats::{
         self,
+        rar::RarFileEntry,
         zip::{ZipFile, ZipFileEntry},
         Formats,
     },
@@ -11,6 +12,7 @@ use std::fs::create_dir_all;
 
 pub enum OriginalArchiveMetadata<'a> {
     Zip(formats::zip::ZipArchiveMetadata<'a>),
+    Rar(formats::rar::RarArchiveMetadata),
 }
 
 pub trait ArchiveMetadata<'a> {
@@ -40,7 +42,24 @@ pub fn metadata<'a>(
             }
             OriginalArchiveMetadata::Zip(metadata)
         }
-        Formats::Rar => todo!(),
+        Formats::Rar => {
+            let metadata = formats::rar::parser::metadata(&mut file);
+            if check_integrity
+                && !formats::rar::parser::check_integrity_headers(
+                    &mut file,
+                    &metadata,
+                    &buffer_size,
+                )
+                && !formats::rar::parser::check_integrity_all(
+                    &mut file,
+                    &metadata.files,
+                    &buffer_size,
+                )
+            {
+                return Err("Integrity check failed".to_string());
+            };
+            OriginalArchiveMetadata::Rar(metadata)
+        }
     };
 
     Ok(Box::new(metadata))
@@ -73,7 +92,24 @@ pub fn extract(
             }
             &metadata.clone() as &dyn ArchiveMetadata
         }
-        Formats::Rar => todo!(),
+        Formats::Rar => {
+            let metadata = formats::rar::parser::metadata(&mut file);
+            if check_integrity
+                && !formats::rar::parser::check_integrity_headers(
+                    &mut file,
+                    &metadata,
+                    &buffer_size,
+                )
+                && !formats::rar::parser::check_integrity_all(
+                    &mut file,
+                    &metadata.files,
+                    &buffer_size,
+                )
+            {
+                return Err("Integrity check failed".to_string());
+            };
+            &metadata.clone() as &dyn ArchiveMetadata
+        }
     };
 
     let files = metadata.get_files();
@@ -86,7 +122,12 @@ pub fn extract(
                     format!("{}/{}", &output, &path)
                 });
             }
-            Formats::Rar => todo!(),
+            Formats::Rar => {
+                let rar_files = formats::rar::to_rar_entries(files);
+                formats::rar::parser::extract(&mut file, &rar_files, &buffer_size, &|path| {
+                    format!("{}/{}", &output, &path)
+                });
+            }
         }
     } else if index.is_some() {
         let index = index.unwrap();
@@ -100,7 +141,12 @@ pub fn extract(
                 &buffer_size,
                 &|path| format!("{}/{}", &output, &path),
             ),
-            Formats::Rar => todo!(),
+            Formats::Rar => formats::rar::parser::extract(
+                &mut file,
+                &formats::rar::to_rar_entries(files),
+                &buffer_size,
+                &|path| format!("{}/{}", &output, &path),
+            ),
         };
     } else {
         let path = path.unwrap();
@@ -121,7 +167,22 @@ pub fn extract(
                     format!("{}/{}", &output, &path)
                 });
             }
-            Formats::Rar => todo!(),
+            Formats::Rar => {
+                let files: Vec<RarFileEntry> = metadata
+                    .get_files()
+                    .iter()
+                    .filter_map(|file| {
+                        if file.get_path().starts_with(&path) {
+                            Some(formats::rar::to_rar_entry(*file))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                formats::rar::parser::extract(&mut file, &files, &buffer_size, &|path| {
+                    format!("{}/{}", &output, &path)
+                });
+            }
         }
     };
 

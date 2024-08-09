@@ -53,7 +53,7 @@ pub fn to_zip_archive_metadata<'a>(
     let original = from.get_original();
     match original {
         OriginalArchiveMetadata::Zip(zip_archive) => zip_archive.clone(),
-        //_ => panic!("This could never happen, this is only here for type safety"),
+        _ => panic!("This could never happen, this is only here for type safety"),
     }
 }
 
@@ -124,7 +124,7 @@ pub fn to_zip_entry<'a>(from: &'a (dyn FileEntry<'a> + 'a)) -> ZipFileEntry<'a> 
     let original = from.get_original();
     match original {
         OriginalFileEntry::Zip(zip_file) => zip_file.clone(),
-        //_ => panic!("This could never happen, this is only here for type safety"),
+        _ => panic!("This could never happen, this is only here for type safety"),
     }
 }
 
@@ -134,7 +134,7 @@ pub fn to_zip_entries<'a>(from: Vec<&'a (dyn FileEntry<'a> + 'a)>) -> Vec<ZipFil
             let original = file.get_original();
             match original {
                 OriginalFileEntry::Zip(zip_file) => zip_file.clone(),
-                //_ => panic!("This could never happen, this is only here for type safety"),
+                _ => panic!("This could never happen, this is only here for type safety"),
             }
         })
         .collect()

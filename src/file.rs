@@ -7,7 +7,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 
-use crate::formats::zip::ZipFileEntry;
+use crate::formats::{rar::RarFileEntry, zip::ZipFileEntry};
 
 pub struct FsFile {
     pub size: u64,
@@ -59,6 +59,7 @@ pub trait File {
 
 pub enum OriginalFileEntry<'a> {
     Zip(&'a ZipFileEntry<'a>),
+    Rar(&'a RarFileEntry),
 }
 
 pub trait FileEntry<'a> {
