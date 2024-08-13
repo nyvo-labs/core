@@ -20,17 +20,25 @@ pub fn metadata(file: &mut dyn DataReader, password: Option<&String>) -> HsspMet
     let iv: [u8; 16] = file.read_u8array(&16).try_into().unwrap();
     let main = file.read_u32le();
     if version == 2 {
-        let bytes = file.read_u128le();
-        if bytes == 0 {
+        let mut is_empty = true;
+        file.read_u8array(&64).into_iter().for_each(|byte| {
+            if !is_empty {
+                return;
+            }
+            if byte != 0 {
+                is_empty = false;
+            }
+        });
+        if is_empty {
             version = 3;
         } else {
-            file.jump(&-16);
+            file.jump(&-64);
         }
     }
 
     let encrypted = !(pwd_hash == [0; 32] && iv == [0; 16]);
 
-    let decrypted_data: Vec<u8>;
+    let mut decrypted_data: Option<Vec<u8>> = None;
     let body: &mut dyn DataReader = if encrypted {
         let key = sha256::hash_buf(password.unwrap_or(&"".to_string()).as_bytes());
         let in_hash = sha256::hash_buf(&key);
@@ -42,14 +50,15 @@ pub fn metadata(file: &mut dyn DataReader, password: Option<&String>) -> HsspMet
                     hash: pwd_hash,
                     iv,
                     in_hash,
+                    data: None,
                 }),
                 files: Vec::new(),
                 has_main: false,
             };
         } else {
             let data = file.read_u8array(&{ file.get_size() - if version > 2 { 128 } else { 64 } });
-            decrypted_data = aes256cbc::decrypt(&data, &key, &iv);
-            &mut VirtualFileReader::new(&decrypted_data)
+            decrypted_data = Some(aes256cbc::decrypt(&data, &key, &iv));
+            &mut VirtualFileReader::new(decrypted_data.as_mut().unwrap())
         }
     } else {
         file
@@ -84,6 +93,7 @@ pub fn metadata(file: &mut dyn DataReader, password: Option<&String>) -> HsspMet
                 hash: pwd_hash,
                 iv,
                 in_hash: pwd_hash,
+                data: decrypted_data,
             })
         } else {
             None
@@ -100,4 +110,20 @@ pub fn check_integrity_all(file: &mut dyn DataReader, metadata: &HsspMetadata) -
         return true;
     }
     false
+}
+
+pub fn get_file(
+    reader: &mut dyn DataReader,
+    metadata: &HsspMetadata,
+    entry: &HsspFileEntry,
+) -> Vec<u8> {
+    if metadata.encryption.is_some() {
+        let mut body =
+            VirtualFileReader::new(metadata.encryption.as_ref().unwrap().data.as_ref().unwrap());
+        body.seek(&entry.offset);
+        body.read_u8array(&entry.size)
+    } else {
+        reader.seek(&entry.offset);
+        reader.read_u8array(&entry.size)
+    }
 }

@@ -1,6 +1,5 @@
 pub mod parser;
 
-#[derive(Debug)]
 pub struct HsspMetadata {
     pub version: u8,
     pub checksum: u32,
@@ -9,11 +8,11 @@ pub struct HsspMetadata {
     pub has_main: bool,
 }
 
-#[derive(Debug)]
 pub struct HsspEncryption {
     pub hash: [u8; 32],
     pub in_hash: [u8; 32],
     pub iv: [u8; 16],
+    pub data: Option<Vec<u8>>,
 }
 
 #[derive(Debug)]
