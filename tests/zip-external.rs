@@ -1,6 +1,6 @@
 use corelib::{
     archive::{self, EntrySource, OriginalArchiveMetadata},
-    file::{FileReader, FileWriter, FsFile},
+    file::{DataReader, FileReader, FileWriter, FsFile},
     formats::Formats,
 };
 

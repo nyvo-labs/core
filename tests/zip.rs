@@ -1,6 +1,6 @@
 use corelib::{
     self,
-    file::{FileReader, FileWriter},
+    file::{DataReader, FileReader, FileWriter},
     formats::zip::{ZipArchiveData, ZipFile},
     helpers::hash::crc32,
 };

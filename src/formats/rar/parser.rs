@@ -1,14 +1,14 @@
 use chrono::DateTime;
 
 use crate::{
-    file::{FileReader, FileWriter},
+    file::{DataReader, FileWriter},
     formats::rar::{RarCompression, RarPlatform},
     helpers::{datetime::filetime, hash::crc32},
 };
 
 use super::{RarArchiveMetadata, RarEncryption, RarFileEntry};
 
-pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
+pub fn metadata(file: &mut dyn DataReader) -> RarArchiveMetadata {
     let mut i = 0;
     let maj_version;
     let min_version;
@@ -21,7 +21,7 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
             panic!("Could not find RAR signature");
         }
         let mut buf = [0; 8];
-        let bytes = file.read(&mut buf);
+        let bytes = file.read_buffer(&mut buf);
         if bytes == b"Rar!\x1A\x07\x01\x00" {
             maj_version = 5;
             min_version = 0;
@@ -139,7 +139,7 @@ pub fn metadata(file: &mut FileReader) -> RarArchiveMetadata {
     }
 }
 
-pub fn get_file(file: &mut FileReader, entry: &RarFileEntry) -> Result<Vec<u8>, String> {
+pub fn get_file(file: &mut dyn DataReader, entry: &RarFileEntry) -> Result<Vec<u8>, String> {
     if entry.compression.is_some() {
         return Err("Compressed RAR files are not supported yet.".to_string());
     }
@@ -148,7 +148,7 @@ pub fn get_file(file: &mut FileReader, entry: &RarFileEntry) -> Result<Vec<u8>, 
 }
 
 pub fn extract(
-    file: &mut FileReader,
+    file: &mut dyn DataReader,
     entries: &Vec<RarFileEntry>,
     buffer_size: &u64,
     path_rewriter: &dyn Fn(&String) -> String,
@@ -174,7 +174,7 @@ pub fn extract(
 }
 
 pub fn check_integrity(
-    source: &mut FileReader,
+    source: &mut dyn DataReader,
     file: &RarFileEntry,
     buffer_size: &u64,
 ) -> Result<Option<bool>, String> {
@@ -191,7 +191,7 @@ pub fn check_integrity(
 }
 
 pub fn check_integrity_all(
-    source: &mut FileReader,
+    source: &mut dyn DataReader,
     files: &Vec<RarFileEntry>,
     buffer_size: &u64,
 ) -> bool {
@@ -207,7 +207,7 @@ pub fn check_integrity_all(
 }
 
 pub fn check_integrity_headers(
-    source: &mut FileReader,
+    source: &mut dyn DataReader,
     metadata: &RarArchiveMetadata,
     buffer_size: &u64,
 ) -> bool {
@@ -435,7 +435,7 @@ impl Clone for HeaderType {
     }
 }
 
-fn parse_header(file: &mut FileReader) -> Header {
+fn parse_header(file: &mut dyn DataReader) -> Header {
     let crc = file.read_u32le();
     let size = file.read_vu7();
     let header_offset = file.get_position();

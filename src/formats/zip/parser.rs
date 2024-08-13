@@ -1,10 +1,10 @@
 use super::{ZipArchiveMetadata, ZipFileEntry};
 use crate::{
-    file::{FileReader, FileWriter},
+    file::{DataReader, FileWriter},
     helpers::{datetime::msdos, hash::crc32},
 };
 
-pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
+pub fn metadata<'a>(file: &mut dyn DataReader) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
 
     //let signature = local_files.1;
@@ -17,13 +17,13 @@ pub fn metadata<'a>(file: &mut FileReader) -> ZipArchiveMetadata<'a> {
     }
 }
 
-pub fn get_file(file: &mut FileReader, entry: &ZipFileEntry) -> Vec<u8> {
+pub fn get_file(file: &mut dyn DataReader, entry: &ZipFileEntry) -> Vec<u8> {
     file.seek(&entry.offset);
     file.read_u8array(&(entry.uncompressed_size as u64))
 }
 
 pub fn extract(
-    file: &mut FileReader,
+    file: &mut dyn DataReader,
     entries: &Vec<ZipFileEntry>,
     buffer_size: &u64,
     path_rewriter: &dyn Fn(&String) -> String,
@@ -45,7 +45,7 @@ pub fn extract(
     }
 }
 
-fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
+fn read_local_files<'a>(file: &mut dyn DataReader) -> (Vec<ZipFileEntry<'a>>, u32) {
     let mut files: Vec<ZipFileEntry> = Vec::new();
 
     let mut signature: u32 = file.read_u32le();
@@ -112,13 +112,17 @@ fn read_local_files<'a>(file: &mut FileReader) -> (Vec<ZipFileEntry<'a>>, u32) {
     (files, signature)
 }
 
-pub fn check_integrity(source: &mut FileReader, file: &ZipFileEntry, buffer_size: &u64) -> bool {
+pub fn check_integrity(
+    source: &mut dyn DataReader,
+    file: &ZipFileEntry,
+    buffer_size: &u64,
+) -> bool {
     let hash = crc32::hash(source, &file.offset, &file.size, buffer_size);
     hash == file.checksum
 }
 
 pub fn check_integrity_all(
-    source: &mut FileReader,
+    source: &mut dyn DataReader,
     files: &Vec<ZipFileEntry>,
     buffer_size: &u64,
 ) -> bool {

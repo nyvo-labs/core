@@ -79,61 +79,142 @@ pub struct Times {
     pub modified: DateTime<Utc>,
 }
 
-#[derive(Debug)]
-pub struct FileReader {
-    path: String,
-    file: std::fs::File,
-    pos: u64,
+pub enum DataReaderType<'a> {
+    File(&'a mut FileReader),
+    Virtual(VirtualFileReader<'a>),
 }
 
-impl<'a> FileReader {
-    pub fn new(path: &'a String) -> Self {
-        let mut file = OpenOptions::new().read(true).open(path).unwrap();
-        file.rewind().unwrap();
-
-        Self {
-            path: path.to_owned(),
-            file,
-            pos: 0,
-        }
-    }
-
-    pub fn set_end(&mut self, end: &u64) -> LimitedFileReader {
-        LimitedFileReader {
-            file: self,
-            end: *end,
-        }
-    }
-
-    pub fn close(self) {
-        self.file.sync_all().unwrap();
-        drop(self);
-    }
-
-    pub fn export(
+pub trait DataReader
+where
+    Self: Read,
+{
+    fn get_reader(&mut self) -> DataReaderType;
+    fn set_start(&mut self, start: &u64);
+    fn reset_start(&mut self);
+    fn set_end(&mut self, end: &u64);
+    fn reset_end(&mut self);
+    fn export(
         &mut self,
         offset: &u64,
         len: &u64,
         target: &mut FileWriter,
         modified: &DateTime<Utc>,
         buffer_size: &u64,
-    ) {
-        let pos_before = self.get_position();
-        self.seek(offset);
-        let mut buf = vec![0; *buffer_size as usize];
-        let mut remaining = *len;
+    );
+    fn seek(&mut self, pos: &u64);
+    fn rewind(&mut self);
+    fn jump(&mut self, offset: &i128);
+    fn get_position(&self) -> u64;
+    fn get_size(&self) -> u64;
+    fn read_buffer<'c>(&'c mut self, buf: &'c mut [u8]) -> &'c mut [u8];
+    fn read_utf8(&mut self, len: &u64) -> String {
+        let mut buf = vec![0; *len as usize];
+        self.read_buffer(&mut buf);
+        String::from_utf8(buf).unwrap()
+    }
 
-        while remaining > 0 {
-            let to_read = min(*buffer_size, remaining) as usize;
-            let read = self.read(&mut buf[..to_read]);
-            target.write(read);
-            remaining -= to_read as u64;
+    fn read_u8array(&mut self, len: &u64) -> Vec<u8> {
+        let mut buf = vec![0; *len as usize];
+        self.read_buffer(&mut buf);
+        buf
+    }
+
+    fn read_u8(&mut self) -> u8 {
+        let mut buf = [0; 1];
+        self.read_buffer(&mut buf);
+        u8::from_le_bytes(buf)
+    }
+
+    fn read_u16le(&mut self) -> u16 {
+        let mut buf = [0; 2];
+        self.read_buffer(&mut buf);
+        u16::from_le_bytes(buf)
+    }
+
+    fn read_u16be(&mut self) -> u16 {
+        let mut buf = [0; 2];
+        self.read_buffer(&mut buf);
+        u16::from_be_bytes(buf)
+    }
+
+    fn read_u32le(&mut self) -> u32 {
+        let mut buf = [0; 4];
+        self.read_buffer(&mut buf);
+        u32::from_le_bytes(buf)
+    }
+
+    fn read_u32be(&mut self) -> u32 {
+        let mut buf = [0; 4];
+        self.read_buffer(&mut buf);
+        u32::from_be_bytes(buf)
+    }
+
+    fn read_u64le(&mut self) -> u64 {
+        let mut buf = [0; 8];
+        self.read_buffer(&mut buf);
+        u64::from_le_bytes(buf)
+    }
+
+    fn read_u64be(&mut self) -> u64 {
+        let mut buf = [0; 8];
+        self.read_buffer(&mut buf);
+        u64::from_be_bytes(buf)
+    }
+
+    fn read_u128le(&mut self) -> u128 {
+        let mut buf = [0; 16];
+        self.read_buffer(&mut buf);
+        u128::from_le_bytes(buf)
+    }
+
+    fn read_u128be(&mut self) -> u128 {
+        let mut buf = [0; 16];
+        self.read_buffer(&mut buf);
+        u128::from_be_bytes(buf)
+    }
+
+    fn read_vu7(&mut self) -> u128 {
+        // referred to as vint in the RAR 5.0 spec
+        let mut result = 0;
+        let mut shift = 0u16;
+        loop {
+            let byte = self.read_u8();
+            result |= ((byte & 0x7F) as u128) << shift;
+            if byte & 0x80 == 0 {
+                break;
+            }
+            shift += 7;
         }
+        result
+    }
+}
 
-        let time = FileTimes::new().set_modified(modified.to_owned().into());
-        target.set_times(&time);
+#[derive(Debug)]
+pub struct FileReader {
+    path: String,
+    file: std::fs::File,
+    pos: u64,
+    initial_start: u64,
+    initial_end: u64,
+    start: u64,
+    end: u64,
+}
 
-        self.seek(&pos_before);
+impl<'a> FileReader {
+    pub fn new(path: &'a String) -> Self {
+        let mut file = OpenOptions::new().read(true).open(path).unwrap();
+        file.rewind().unwrap();
+        let size = file.metadata().unwrap().len();
+
+        Self {
+            path: path.to_owned(),
+            file,
+            pos: 0,
+            initial_start: 0,
+            initial_end: size,
+            start: 0,
+            end: size,
+        }
     }
 
     pub fn get_times(&self) -> Times {
@@ -152,112 +233,92 @@ impl<'a> FileReader {
         &self.path
     }
 
-    pub fn seek(&mut self, pos: &u64) {
+    pub fn close(self) {
+        self.file.sync_all().unwrap();
+        drop(self);
+    }
+}
+
+impl DataReader for FileReader {
+    fn get_reader(&mut self) -> DataReaderType {
+        DataReaderType::File(self)
+    }
+
+    fn set_start(&mut self, start: &u64) {
+        let start_diff = *start as i128 - self.start as i128;
+        self.jump(&start_diff);
+        self.start = *start;
+    }
+
+    fn reset_start(&mut self) {
+        let start_diff = self.initial_start as i128 - self.start as i128;
+        self.jump(&start_diff);
+        self.start = self.initial_start;
+    }
+
+    fn set_end(&mut self, end: &u64) {
+        if &self.get_position() > end {
+            self.rewind();
+        }
+        self.end = *end;
+    }
+
+    fn reset_end(&mut self) {
+        self.end = self.initial_end;
+    }
+
+    fn export(
+        &mut self,
+        offset: &u64,
+        len: &u64,
+        target: &mut FileWriter,
+        modified: &DateTime<Utc>,
+        buffer_size: &u64,
+    ) {
+        let pos_before = self.get_position();
+        self.seek(offset);
+        let mut buf = vec![0; *buffer_size as usize];
+        let mut remaining = *len;
+
+        while remaining > 0 {
+            let to_read = min(*buffer_size, remaining) as usize;
+            let read = self.read_buffer(&mut buf[..to_read]);
+            target.write(read);
+            remaining -= to_read as u64;
+        }
+
+        let time = FileTimes::new().set_modified(modified.to_owned().into());
+        target.set_times(&time);
+
+        self.seek(&pos_before);
+    }
+
+    fn seek(&mut self, pos: &u64) {
         self.file.seek(std::io::SeekFrom::Start(*pos)).unwrap();
         self.pos = *pos;
     }
 
-    pub fn rewind(&mut self) {
-        self.seek(&0);
+    fn rewind(&mut self) {
+        let start = self.start;
+        self.seek(&start);
     }
 
-    pub fn jump(&mut self, offset: &i128) {
+    fn jump(&mut self, offset: &i128) {
         self.seek(&((self.pos as i128 + offset) as u64));
     }
 
-    pub fn get_position(&self) -> u64 {
-        self.pos
+    fn get_position(&self) -> u64 {
+        self.pos - self.start
     }
 
-    pub fn get_size(&self) -> u64 {
+    fn get_size(&self) -> u64 {
         self.file.metadata().unwrap().len()
     }
 
-    pub fn read<'b>(&mut self, buf: &'b mut [u8]) -> &'b mut [u8] {
+    fn read_buffer<'c>(&'c mut self, buf: &'c mut [u8]) -> &'c mut [u8] {
         let _ = self.file.read_exact(buf);
         self.pos += buf.len() as u64;
         buf
-    }
-
-    pub fn read_utf8(&mut self, len: &u64) -> String {
-        let mut buf = vec![0; *len as usize];
-        self.read(&mut buf);
-        String::from_utf8(buf).unwrap()
-    }
-
-    pub fn read_u8array(&mut self, len: &u64) -> Vec<u8> {
-        let mut buf = vec![0; *len as usize];
-        self.read(&mut buf);
-        buf
-    }
-
-    pub fn read_u8(&mut self) -> u8 {
-        let mut buf = [0; 1];
-        self.read(&mut buf);
-        u8::from_le_bytes(buf)
-    }
-
-    pub fn read_u16le(&mut self) -> u16 {
-        let mut buf = [0; 2];
-        self.read(&mut buf);
-        u16::from_le_bytes(buf)
-    }
-
-    pub fn read_u16be(&mut self) -> u16 {
-        let mut buf = [0; 2];
-        self.read(&mut buf);
-        u16::from_be_bytes(buf)
-    }
-
-    pub fn read_u32le(&mut self) -> u32 {
-        let mut buf = [0; 4];
-        self.read(&mut buf);
-        u32::from_le_bytes(buf)
-    }
-
-    pub fn read_u32be(&mut self) -> u32 {
-        let mut buf = [0; 4];
-        self.read(&mut buf);
-        u32::from_be_bytes(buf)
-    }
-
-    pub fn read_u64le(&mut self) -> u64 {
-        let mut buf = [0; 8];
-        self.read(&mut buf);
-        u64::from_le_bytes(buf)
-    }
-
-    pub fn read_u64be(&mut self) -> u64 {
-        let mut buf = [0; 8];
-        self.read(&mut buf);
-        u64::from_be_bytes(buf)
-    }
-
-    pub fn read_u128le(&mut self) -> u128 {
-        let mut buf = [0; 16];
-        self.read(&mut buf);
-        u128::from_le_bytes(buf)
-    }
-
-    pub fn read_u128be(&mut self) -> u128 {
-        let mut buf = [0; 16];
-        self.read(&mut buf);
-        u128::from_be_bytes(buf)
-    }
-
-    pub fn read_vu7(&mut self) -> u128 {
-        // referred to as vint in the RAR 5.0 spec
-        let mut result = 0;
-        let mut shift = 0u16;
-        loop {
-            let byte = self.read_u8();
-            result |= ((byte & 0x7F) as u128) << shift;
-            if byte & 0x80 == 0 {
-                break;
-            }
-            shift += 7;
-        }
-        result
     }
 }
 
@@ -267,23 +328,158 @@ impl Clone for FileReader {
             path: self.path.clone(),
             file: OpenOptions::new().read(true).open(&self.path).unwrap(),
             pos: self.pos,
+            initial_start: self.initial_start,
+            initial_end: self.initial_end,
+            start: self.start,
+            end: self.end,
         }
     }
 }
 
-#[derive(Debug)]
-pub struct LimitedFileReader<'a> {
-    file: &'a mut FileReader,
+impl Read for FileReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if (self.get_position() + self.start) >= self.end {
+            return Ok(0);
+        }
+        let to_read = min(
+            buf.len(),
+            (self.end - self.get_position() - self.start) as usize,
+        );
+        let read = self.read_buffer(&mut buf[..to_read]);
+        Ok(read.len())
+    }
+}
+
+pub struct VirtualFileReader<'a> {
+    data: &'a [u8],
+    pos: u64,
+    initial_start: u64,
+    initial_end: u64,
+    start: u64,
     end: u64,
 }
 
-impl Read for LimitedFileReader<'_> {
+impl<'a> VirtualFileReader<'a> {
+    pub fn new(data: &'a [u8]) -> Self {
+        Self {
+            data,
+            pos: 0,
+            initial_start: 0,
+            initial_end: data.len() as u64,
+            start: 0,
+            end: data.len() as u64,
+        }
+    }
+}
+
+impl Clone for VirtualFileReader<'_> {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data,
+            pos: self.pos,
+            initial_start: self.initial_start,
+            initial_end: self.initial_end,
+            start: self.start,
+            end: self.end,
+        }
+    }
+}
+
+impl<'a> DataReader for VirtualFileReader<'a> {
+    fn get_reader(&mut self) -> DataReaderType {
+        DataReaderType::Virtual(self.clone())
+    }
+
+    fn set_start(&mut self, start: &u64) {
+        let start_diff = *start as i128 - self.start as i128;
+        self.jump(&start_diff);
+        self.start = *start;
+    }
+
+    fn reset_start(&mut self) {
+        let start_diff = self.initial_start as i128 - self.start as i128;
+        self.jump(&start_diff);
+        self.start = self.initial_start;
+    }
+
+    fn set_end(&mut self, end: &u64) {
+        if &self.get_position() > end {
+            self.rewind();
+        }
+        self.end = *end;
+    }
+
+    fn reset_end(&mut self) {
+        self.end = self.initial_end;
+    }
+
+    fn export(
+        &mut self,
+        offset: &u64,
+        len: &u64,
+        target: &mut FileWriter,
+        modified: &DateTime<Utc>,
+        buffer_size: &u64,
+    ) {
+        let pos_before = self.get_position();
+        self.seek(offset);
+        let mut buf = vec![0; *buffer_size as usize];
+        let mut remaining = *len;
+
+        while remaining > 0 {
+            let to_read = min(*buffer_size, remaining) as usize;
+            let read = self.read_buffer(&mut buf[..to_read]);
+            target.write(read);
+            remaining -= to_read as u64;
+        }
+
+        let time = FileTimes::new().set_modified(modified.to_owned().into());
+        target.set_times(&time);
+
+        self.seek(&pos_before);
+    }
+
+    fn seek(&mut self, pos: &u64) {
+        self.pos = *pos;
+    }
+
+    fn rewind(&mut self) {
+        let start = self.start;
+        self.seek(&start);
+    }
+
+    fn jump(&mut self, offset: &i128) {
+        self.seek(&((self.pos as i128 + offset) as u64));
+    }
+
+    fn get_position(&self) -> u64 {
+        self.pos - self.start
+    }
+
+    fn get_size(&self) -> u64 {
+        self.data.len() as u64
+    }
+
+    fn read_buffer<'c>(&mut self, buf: &'c mut [u8]) -> &'c mut [u8] {
+        let len = min(buf.len(), self.data.len() - self.pos as usize);
+        buf.copy_from_slice(
+            &self.data[(self.pos + self.start) as usize..(self.pos + self.start) as usize + len],
+        );
+        self.pos += len as u64;
+        buf
+    }
+}
+
+impl Read for VirtualFileReader<'_> {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        if self.file.get_position() >= self.end {
+        if (self.get_position() + self.start) >= self.end {
             return Ok(0);
         }
-        let to_read = min(buf.len(), (self.end - self.file.get_position()) as usize);
-        let read = self.file.read(&mut buf[..to_read]);
+        let to_read = min(
+            buf.len(),
+            (self.end - self.get_position() - self.start) as usize,
+        );
+        let read = self.read_buffer(&mut buf[..to_read]);
         Ok(read.len())
     }
 }

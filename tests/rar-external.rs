@@ -1,5 +1,6 @@
 use corelib::{
     archive::{self, OriginalArchiveMetadata},
+    file::DataReader,
     file::FileReader,
     formats::Formats,
 };

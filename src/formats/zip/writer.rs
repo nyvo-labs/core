@@ -1,5 +1,8 @@
 use super::ZipArchiveData;
-use crate::{file::FileWriter, helpers::datetime::msdos};
+use crate::{
+    file::{DataReader, FileWriter},
+    helpers::datetime::msdos,
+};
 
 pub fn write(target: &mut FileWriter, data: ZipArchiveData, buffer_size: &u64) {
     for file in data.files {

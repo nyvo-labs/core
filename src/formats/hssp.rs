@@ -12,6 +12,7 @@ pub struct HsspMetadata {
 #[derive(Debug)]
 pub struct HsspEncryption {
     pub hash: [u8; 32],
+    pub in_hash: [u8; 32],
     pub iv: [u8; 16],
 }
 

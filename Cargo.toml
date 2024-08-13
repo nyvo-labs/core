@@ -11,4 +11,6 @@ name = 'corelib'
 [dependencies]
 chrono = "0.4.38"
 crc32fast = "1.4.2"
+libaes = "0.7.0"
 murmur3 = "0.5.2"
+sha2 = "0.10.8"

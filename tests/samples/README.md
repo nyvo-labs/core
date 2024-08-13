@@ -22,6 +22,7 @@ Thanks to [@ssokolow](https://github.com/ssokolow) for providing samples 000-002
 
 Most of the samples are taken from the official [HSSP JavaScript reference implementation](https://github.com/HSSPfile/js/blob/main/test/samples).
 
-| ID                   | Source/Credits                                                          |
-| -------------------- | ----------------------------------------------------------------------- |
-| [000](hssp/000.hssp) | <https://github.com/HSSPfile/js/raw/main/test/samples/rfld-normal.hssp> |
+| ID                   | Source/Credits                                                             |
+| -------------------- | -------------------------------------------------------------------------- |
+| [000](hssp/000.hssp) | <https://github.com/HSSPfile/js/raw/main/test/samples/rfld-normal.hssp>    |
+| [001](hssp/001.hssp) | <https://github.com/HSSPfile/js/raw/main/test/samples/rfld-encrypted.hssp> |
