@@ -11,4 +11,5 @@ name = 'corelib'
 [dependencies]
 chrono = "0.4.38"
 crc32fast = "1.4.2"
+dh = "0.4.0"
 neozip = "0.2.0"
