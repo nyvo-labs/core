@@ -1,5 +1,9 @@
-pub mod parser;
+use std::cell::RefCell;
 
+use crate::file::Readable;
+
+pub mod parser;
+pub mod writer;
 pub struct HsspMetadata {
     pub version: u8,
     pub checksum: u32,
@@ -8,11 +12,22 @@ pub struct HsspMetadata {
     pub has_main: bool,
 }
 
+pub struct HsspArchiveData {
+    pub version: u8,
+    pub encryption: Option<HsspEncryptionData>,
+    pub files: Vec<(HsspFileEntry, Option<Box<dyn Readable>>)>,
+}
+
+pub struct HsspEncryptionData {
+    pub key: Vec<u8>,
+    pub iv: [u8; 16],
+}
+
 pub struct HsspEncryption {
     pub hash: [u8; 32],
     pub in_hash: [u8; 32],
     pub iv: [u8; 16],
-    pub data: Option<Vec<u8>>,
+    pub data: Option<RefCell<Vec<u8>>>,
 }
 
 #[derive(Debug)]

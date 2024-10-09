@@ -1,10 +1,10 @@
 use super::ZipArchiveData;
 use crate::{
-    file::{DataReader, FileWriter},
+    file::{WFsFile, Writable},
     helpers::datetime::msdos,
 };
 
-pub fn write(target: &mut FileWriter, data: ZipArchiveData, buffer_size: &u64) {
+pub fn write(target: &mut WFsFile, data: ZipArchiveData, buffer_size: &u64) {
     for file in data.files {
         if file.is_directory {
             todo!();

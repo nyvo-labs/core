@@ -1,14 +1,14 @@
 use chrono::DateTime;
 
 use crate::{
-    file::{DataReader, FileWriter},
     formats::rar::{RarCompression, RarPlatform},
     helpers::{datetime::filetime, hash::crc32},
 };
+use dh::{recommended::*, Readable};
 
 use super::{RarArchiveMetadata, RarEncryption, RarFileEntry};
 
-pub fn metadata(file: &mut dyn DataReader) -> RarArchiveMetadata {
+pub fn metadata(file: &mut dyn Readable) -> RarArchiveMetadata {
     let mut i = 0;
     let maj_version;
     let min_version;
@@ -139,7 +139,7 @@ pub fn metadata(file: &mut dyn DataReader) -> RarArchiveMetadata {
     }
 }
 
-pub fn get_file(file: &mut dyn DataReader, entry: &RarFileEntry) -> Result<Vec<u8>, String> {
+pub fn get_file(file: &mut dyn Readable, entry: &RarFileEntry) -> Result<Vec<u8>, String> {
     if entry.compression.is_some() {
         return Err("Compressed RAR files are not supported yet.".to_string());
     }
@@ -148,7 +148,7 @@ pub fn get_file(file: &mut dyn DataReader, entry: &RarFileEntry) -> Result<Vec<u
 }
 
 pub fn extract(
-    file: &mut dyn DataReader,
+    file: &mut dyn Readable,
     entries: &Vec<RarFileEntry>,
     buffer_size: &u64,
     path_rewriter: &dyn Fn(&String) -> String,
@@ -159,7 +159,7 @@ pub fn extract(
         }
         let path = path_rewriter(&entry.path);
         if !entry.is_directory {
-            let mut target = FileWriter::new(&path, &false);
+            let mut target = dh::file::open_rw(&path);
             file.export(
                 &entry.offset,
                 &entry.size,
@@ -174,7 +174,7 @@ pub fn extract(
 }
 
 pub fn check_integrity(
-    source: &mut dyn DataReader,
+    source: &mut dyn Readable,
     file: &RarFileEntry,
     buffer_size: &u64,
 ) -> Result<Option<bool>, String> {
@@ -191,7 +191,7 @@ pub fn check_integrity(
 }
 
 pub fn check_integrity_all(
-    source: &mut dyn DataReader,
+    source: &mut dyn Readable,
     files: &Vec<RarFileEntry>,
     buffer_size: &u64,
 ) -> bool {
@@ -207,7 +207,7 @@ pub fn check_integrity_all(
 }
 
 pub fn check_integrity_headers(
-    source: &mut dyn DataReader,
+    source: &mut dyn Readable,
     metadata: &RarArchiveMetadata,
     buffer_size: &u64,
 ) -> bool {
@@ -435,7 +435,7 @@ impl Clone for HeaderType {
     }
 }
 
-fn parse_header(file: &mut dyn DataReader) -> Header {
+fn parse_header(file: &mut dyn Readable) -> Header {
     let crc = file.read_u32le();
     let size = file.read_vu7();
     let header_offset = file.get_position();

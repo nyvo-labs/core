@@ -1,10 +1,10 @@
 use super::{ZipArchiveMetadata, ZipFileEntry};
 use crate::{
-    file::{DataReader, FileWriter},
+    file::{Readable, WFsFile, Writable},
     helpers::{datetime::msdos, hash::crc32},
 };
 
-pub fn metadata<'a>(file: &mut dyn DataReader) -> ZipArchiveMetadata<'a> {
+pub fn metadata<'a>(file: &mut dyn Readable) -> ZipArchiveMetadata<'a> {
     let local_files = read_local_files(file);
 
     //let signature = local_files.1;
@@ -17,13 +17,13 @@ pub fn metadata<'a>(file: &mut dyn DataReader) -> ZipArchiveMetadata<'a> {
     }
 }
 
-pub fn get_file(file: &mut dyn DataReader, entry: &ZipFileEntry) -> Vec<u8> {
+pub fn get_file(file: &mut dyn Readable, entry: &ZipFileEntry) -> Vec<u8> {
     file.seek(&entry.offset);
     file.read_u8array(&(entry.uncompressed_size as u64))
 }
 
 pub fn extract(
-    file: &mut dyn DataReader,
+    file: &mut dyn Readable,
     entries: &Vec<ZipFileEntry>,
     buffer_size: &u64,
     path_rewriter: &dyn Fn(&String) -> String,
@@ -31,7 +31,7 @@ pub fn extract(
     for entry in entries {
         let path = path_rewriter(&entry.path);
         if !entry.is_directory {
-            let mut target = FileWriter::new(&path, &false);
+            let mut target = WFsFile::new(&path, &false);
             file.export(
                 &entry.offset,
                 &entry.size,
@@ -45,7 +45,7 @@ pub fn extract(
     }
 }
 
-fn read_local_files<'a>(file: &mut dyn DataReader) -> (Vec<ZipFileEntry<'a>>, u32) {
+fn read_local_files<'a>(file: &mut dyn Readable) -> (Vec<ZipFileEntry<'a>>, u32) {
     let mut files: Vec<ZipFileEntry> = Vec::new();
 
     let mut signature: u32 = file.read_u32le();
@@ -112,17 +112,13 @@ fn read_local_files<'a>(file: &mut dyn DataReader) -> (Vec<ZipFileEntry<'a>>, u3
     (files, signature)
 }
 
-pub fn check_integrity(
-    source: &mut dyn DataReader,
-    file: &ZipFileEntry,
-    buffer_size: &u64,
-) -> bool {
+pub fn check_integrity(source: &mut dyn Readable, file: &ZipFileEntry, buffer_size: &u64) -> bool {
     let hash = crc32::hash(source, &file.offset, &file.size, buffer_size);
     hash == file.checksum
 }
 
 pub fn check_integrity_all(
-    source: &mut dyn DataReader,
+    source: &mut dyn Readable,
     files: &Vec<ZipFileEntry>,
     buffer_size: &u64,
 ) -> bool {

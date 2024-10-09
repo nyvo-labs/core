@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     archive::{ArchiveMetadata, OriginalArchiveMetadata},
-    file::{File, FileEntry, FileReader, OriginalFileEntry},
+    file::{File, Readable},
     formats::Formats,
 };
 
@@ -27,11 +27,8 @@ impl<'a> ArchiveMetadata<'a> for ZipArchiveMetadata<'a> {
         Formats::Zip
     }
 
-    fn get_files(&self) -> Vec<&dyn FileEntry> {
-        self.files
-            .iter()
-            .map(|file| file as &dyn FileEntry)
-            .collect()
+    fn get_files(&self) -> Vec<File> {
+        self.files.iter().map(|file| file).collect()
     }
 
     fn get_original(&'a self) -> OriginalArchiveMetadata<'a> {
@@ -72,36 +69,6 @@ pub struct ZipFileEntry<'a> {
     pub compression: &'a str,
 }
 
-impl<'a> FileEntry<'a> for ZipFileEntry<'a> {
-    fn get_path(&self) -> &String {
-        &self.path
-    }
-
-    fn get_offset(&self) -> &u64 {
-        &self.offset
-    }
-
-    fn get_size(&self) -> &u64 {
-        &self.size
-    }
-
-    fn get_modified(&self) -> &DateTime<Utc> {
-        &self.modified
-    }
-
-    fn get_is_directory(&self) -> &bool {
-        &self.is_directory
-    }
-
-    fn get_uncompressed_size(&self) -> &u32 {
-        &self.uncompressed_size
-    }
-
-    fn get_original(&'a self) -> OriginalFileEntry<'a> {
-        OriginalFileEntry::Zip(self)
-    }
-}
-
 impl<'a> Clone for ZipFileEntry<'a> {
     fn clone(&self) -> Self {
         ZipFileEntry {
@@ -119,27 +86,6 @@ impl<'a> Clone for ZipFileEntry<'a> {
         }
     }
 }
-
-pub fn to_zip_entry<'a>(from: &'a (dyn FileEntry<'a> + 'a)) -> ZipFileEntry<'a> {
-    let original = from.get_original();
-    match original {
-        OriginalFileEntry::Zip(zip_file) => zip_file.clone(),
-        _ => panic!("This could never happen, this is only here for type safety"),
-    }
-}
-
-pub fn to_zip_entries<'a>(from: Vec<&'a (dyn FileEntry<'a> + 'a)>) -> Vec<ZipFileEntry<'a>> {
-    from.into_iter()
-        .map(|file| {
-            let original = file.get_original();
-            match original {
-                OriginalFileEntry::Zip(zip_file) => zip_file.clone(),
-                _ => panic!("This could never happen, this is only here for type safety"),
-            }
-        })
-        .collect()
-}
-
 #[derive(Debug)]
 pub struct ZipFile {
     pub path: String,
@@ -147,41 +93,8 @@ pub struct ZipFile {
     pub size: u64,
     pub modified: DateTime<Utc>,
     pub is_directory: bool,
-    pub source: Option<FileReader>,
+    pub source: Option<Box<dyn Readable>>,
     pub checksum: u32,
-}
-
-impl File for ZipFile {
-    fn get_path(&self) -> &String {
-        &self.path
-    }
-
-    fn get_offset(&self) -> &u64 {
-        &self.offset
-    }
-
-    fn get_size(&self) -> &u64 {
-        &self.size
-    }
-
-    fn get_modified(&self) -> &DateTime<Utc> {
-        &self.modified
-    }
-
-    fn get_is_directory(&self) -> &bool {
-        &self.is_directory
-    }
-
-    fn get_source(&mut self) -> Option<&mut FileReader> {
-        match &mut self.source {
-            Some(source) => Some(source),
-            None => None,
-        }
-    }
-
-    fn get_checksum(&self) -> &u32 {
-        &self.checksum
-    }
 }
 
 #[derive(Debug)]

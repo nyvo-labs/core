@@ -2,9 +2,9 @@ use std::cmp::min;
 
 use crc32fast::Hasher;
 
-use crate::file::DataReader;
+use crate::file::reader::Readable;
 
-pub fn hash(file: &mut dyn DataReader, offset: &u64, size: &u64, buffer_size: &u64) -> u32 {
+pub fn hash(file: &mut dyn Readable, offset: &u64, size: &u64, buffer_size: &u64) -> u32 {
     let pos_before = file.get_position();
     file.seek(offset);
 

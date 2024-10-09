@@ -4,10 +4,7 @@ pub mod parser;
 
 use parser::{EncryptionHeader, Header};
 
-use crate::{
-    archive::ArchiveMetadata,
-    file::{FileEntry, OriginalFileEntry},
-};
+use crate::{archive::ArchiveMetadata, file::File};
 
 #[derive(Debug)]
 pub struct RarArchiveMetadata {
@@ -29,8 +26,8 @@ pub struct RarArchiveMetadata {
 }
 
 impl<'a> ArchiveMetadata<'a> for RarArchiveMetadata {
-    fn get_files(&self) -> Vec<&dyn FileEntry> {
-        self.files.iter().map(|x| x as &dyn FileEntry).collect()
+    fn get_files(&self) -> Vec<&File> {
+        self.files.iter().map(|x| x).collect()
     }
 
     fn get_format(&self) -> super::Formats {
@@ -76,73 +73,6 @@ pub struct RarFileEntry {
     pub encryption: Option<RarEncryption>,
     pub compression: Option<RarCompression>,
     pub creation_platform: Option<RarPlatform>,
-}
-
-impl<'a> FileEntry<'a> for RarFileEntry {
-    fn get_path(&self) -> &String {
-        &self.path
-    }
-
-    fn get_offset(&self) -> &u64 {
-        &self.offset
-    }
-
-    fn get_size(&self) -> &u64 {
-        &self.size
-    }
-
-    fn get_modified(&self) -> &DateTime<Utc> {
-        todo!()
-    }
-
-    fn get_is_directory(&self) -> &bool {
-        &self.is_directory
-    }
-
-    fn get_uncompressed_size(&self) -> &u32 {
-        todo!()
-    }
-
-    fn get_original(&'a self) -> crate::file::OriginalFileEntry<'a> {
-        crate::file::OriginalFileEntry::Rar(self)
-    }
-}
-
-impl Clone for RarFileEntry {
-    fn clone(&self) -> Self {
-        RarFileEntry {
-            path: self.path.clone(),
-            offset: self.offset,
-            size: self.size,
-            uncompressed_size: self.uncompressed_size,
-            is_directory: self.is_directory,
-            modified: self.modified,
-            checksum: self.checksum,
-            encryption: self.encryption.clone(),
-            compression: self.compression.clone(),
-            creation_platform: self.creation_platform.clone(),
-        }
-    }
-}
-
-pub fn to_rar_entry<'a>(from: &'a (dyn FileEntry<'a> + 'a)) -> RarFileEntry {
-    let original = from.get_original();
-    match original {
-        OriginalFileEntry::Rar(rar_file) => rar_file.clone(),
-        _ => panic!("This could never happen, this is only here for type safety"),
-    }
-}
-
-pub fn to_rar_entries<'a>(from: Vec<&'a (dyn FileEntry<'a> + 'a)>) -> Vec<RarFileEntry> {
-    from.into_iter()
-        .map(|file| {
-            let original = file.get_original();
-            match original {
-                OriginalFileEntry::Rar(rar_file) => rar_file.clone(),
-                _ => panic!("This could never happen, this is only here for type safety"),
-            }
-        })
-        .collect()
 }
 
 #[derive(Debug)]

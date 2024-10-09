@@ -1,5 +1,4 @@
 use crate::{
-    file::{FileEntry, FileReader, FileWriter, FsFile},
     formats::{
         self,
         rar::RarFileEntry,
@@ -8,6 +7,7 @@ use crate::{
     },
     helpers::hash::crc32,
 };
+use dh::recommended::*;
 use std::fs::create_dir_all;
 
 pub enum OriginalArchiveMetadata<'a> {
@@ -17,7 +17,7 @@ pub enum OriginalArchiveMetadata<'a> {
 
 pub trait ArchiveMetadata<'a> {
     fn get_format(&self) -> Formats;
-    fn get_files(&self) -> Vec<&dyn FileEntry>;
+    fn get_files(&self) -> Vec<&File>;
     fn get_original(&'a self) -> OriginalArchiveMetadata<'a>;
 }
 
@@ -27,7 +27,7 @@ pub fn metadata<'a>(
     check_integrity: bool,
     buffer_size: u64,
 ) -> Result<Box<OriginalArchiveMetadata<'a>>, String> {
-    let mut file = FileReader::new(&input);
+    let mut file = dh::file::open_r(&input);
     let metadata = match format {
         Formats::Zip => {
             let metadata = formats::zip::parser::metadata(&mut file);
@@ -76,7 +76,7 @@ pub fn extract(
     check_integrity: bool,
     buffer_size: u64,
 ) -> Result<(), String> {
-    let mut file = FileReader::new(&input);
+    let mut file = dh::file::open_r(&input);
     create_dir_all(&output).unwrap();
 
     let metadata: &dyn ArchiveMetadata = match format {
@@ -199,22 +199,13 @@ pub struct EntrySource {
     pub source: FsFile,
 }
 
-impl Clone for EntrySource {
-    fn clone(&self) -> Self {
-        Self {
-            path: self.path.clone(),
-            source: self.source.clone(),
-        }
-    }
-}
-
 pub fn create(
     format: Formats,
     output: String,
     input: Vec<EntrySource>,
     buffer_size: u64,
 ) -> Result<(), String> {
-    let mut file = FileWriter::new(&output, &false);
+    let mut file = dh::file::open_rw(&output);
 
     match format {
         Formats::Zip => {
