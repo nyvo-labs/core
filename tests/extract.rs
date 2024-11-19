@@ -8,9 +8,11 @@ fn zip_001() {
     let ci = rici();
 
     let output = Path::new(if ci {
+        eprintln!("Running in CI");
         std::fs::create_dir("output").unwrap();
         "output/001-zip"
     } else {
+        eprintln!("Running normally");
         "tests/output/001-zip"
     });
 
