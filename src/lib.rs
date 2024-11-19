@@ -5,6 +5,7 @@ pub mod file;
 pub mod formats;
 
 use std::{
+    fs::create_dir_all,
     io::{Error, ErrorKind, Result},
     path::Path,
 };
@@ -15,7 +16,7 @@ pub fn get_version() -> &'static str {
 
 pub(crate) fn prepare_output_dir(output: &Path) -> Result<()> {
     if !output.exists() {
-        match uu_mkdir::mkdir(output, true, 0o644, false) {
+        match create_dir_all(output) {
             Ok(_) => {}
             Err(_) => {
                 return Err(Error::new(
