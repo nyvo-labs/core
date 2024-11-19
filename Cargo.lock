@@ -25,6 +25,7 @@ dependencies = [
  "crc32fast",
  "dh",
  "neozip",
+ "rici",
  "uu_mkdir",
 ]
 
@@ -407,6 +408,11 @@ checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "rici"
+version = "0.1.0"
+source = "git+https://github.com/Le0X8/rici.git?branch=main#aa1bb0396c01ecca73c8af7dcf21dc672de988be"
 
 [[package]]
 name = "rustix"

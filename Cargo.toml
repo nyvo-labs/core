@@ -12,3 +12,6 @@ crc32fast = "1.4.2"
 dh = "0.8.0"
 neozip = "0.3.1"
 uu_mkdir = "0.0.28"
+
+[dev-dependencies]
+rici = { git = "https://github.com/Le0X8/rici.git", branch = "main" }
