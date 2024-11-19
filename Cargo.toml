@@ -2,6 +2,9 @@
 name = 'acridotheres'
 version = '0.4.0'
 edition = '2021'
+description = "Acridotheres Core Library"
+license = "MIT"
+repository = "https://github.com/acridotheres/core"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
