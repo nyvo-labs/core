@@ -13,9 +13,9 @@ pub enum DetectionAccuracy {
 }
 
 pub fn detect(
-    path: &Path,
-    input: &mut dyn Readable,
-    accuracy: &DetectionAccuracy,
+    _path: &Path,
+    _input: &mut dyn Readable,
+    _accuracy: &DetectionAccuracy,
 ) -> Result<Format> {
     Err(Error::new(ErrorKind::Other, "Failed to detect format"))
 }

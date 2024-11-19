@@ -5,16 +5,16 @@ use dh::recommended::*;
 use neozip;
 
 pub fn extract_all(input: &Path, output: &Path, format: Format, buffer_size: u64) -> Result<()> {
-    let mut reader = dh::file::open_r(input).unwrap();
+    let mut reader = dh::file::open_r(input)?;
 
-    prepare_output_dir(output).unwrap();
+    prepare_output_dir(output)?;
 
     match format {
         Format::Zip => {
-            let meta = neozip::metadata(&mut reader).unwrap();
+            let meta = neozip::metadata(&mut reader)?;
             for file in meta.files {
-                let mut writer = dh::file::open_w(output.join(&file.path)).unwrap();
-                neozip::extract_content(&mut reader, &mut writer, &file, buffer_size).unwrap();
+                let mut writer = dh::file::open_w(output.join(&file.path))?;
+                neozip::extract_content(&mut reader, &mut writer, &file, buffer_size)?;
             }
         }
     };

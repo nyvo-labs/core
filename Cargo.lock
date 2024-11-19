@@ -25,7 +25,6 @@ dependencies = [
  "crc32fast",
  "dh",
  "neozip",
- "rici",
 ]
 
 [[package]]
@@ -251,12 +250,6 @@ checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
 dependencies = [
  "proc-macro2",
 ]
-
-[[package]]
-name = "rici"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a7fc6b58eab401e28a89b8f8a7e8bace8e2bc1aae46a309d64d9d96946a6257"
 
 [[package]]
 name = "sha2"

@@ -1,20 +1,10 @@
 use acridotheres::{archive::extract, formats::Format};
 use dh::recommended::*;
-use rici::rici;
 use std::path::Path;
 
 #[test]
 fn zip_001() {
-    let ci = rici();
-
-    let output = Path::new(if ci {
-        eprintln!("Running in CI");
-        std::fs::create_dir("output").unwrap();
-        "output/001-zip"
-    } else {
-        eprintln!("Running normally");
-        "tests/output/001-zip"
-    });
+    let output = Path::new("tests/output/001-zip");
 
     extract::extract_all(
         Path::new("tests/samples/001.zip"),

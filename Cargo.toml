@@ -11,6 +11,3 @@ chrono = "0.4.38"
 crc32fast = "1.4.2"
 dh = "0.8.0"
 neozip = "0.3.1"
-
-[dev-dependencies]
-rici = "0.1.0"
