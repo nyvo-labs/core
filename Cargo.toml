@@ -1,6 +1,6 @@
 [package]
 name = 'acridotheres'
-version = '0.4.1'
+version = '0.5.0'
 edition = '2021'
 description = "Acridotheres Core Library"
 license = "MIT"
@@ -14,3 +14,4 @@ chrono = "0.4.38"
 crc32fast = "1.4.2"
 dh = "0.8.0"
 neozip = "0.3.1"
+acridotheres-3ds = "0.1.0"

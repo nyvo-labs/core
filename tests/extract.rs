@@ -28,3 +28,24 @@ fn zip_001() {
 
     std::fs::remove_dir_all(output).unwrap();
 }
+
+#[test]
+fn umsbt_000() {
+    let output = Path::new("tests/output/000-umsbt");
+
+    extract::extract_all(
+        Path::new("tests/samples/000.umsbt"),
+        output,
+        Format::Umsbt,
+        1024,
+    )
+    .unwrap();
+
+    assert!(output.join("00000000.msbt").exists());
+    assert!(output.join("00000001.msbt").exists());
+    assert!(output.join("00000002.msbt").exists());
+    assert!(output.join("00000003.msbt").exists());
+    assert!(output.join("00000004.msbt").exists());
+
+    std::fs::remove_dir_all(output).unwrap();
+}

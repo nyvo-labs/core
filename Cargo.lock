@@ -18,13 +18,23 @@ dependencies = [
 
 [[package]]
 name = "acridotheres"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "acr",
+ "acridotheres-3ds",
  "chrono",
  "crc32fast",
  "dh",
  "neozip",
+]
+
+[[package]]
+name = "acridotheres-3ds"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "039b0b12eb3db6f87baab9cd9aa806086db4d20edcb51c2e8238a5c15989abb5"
+dependencies = [
+ "dh",
 ]
 
 [[package]]
