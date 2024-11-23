@@ -19,3 +19,11 @@ pub fn detect(
 ) -> Result<Format> {
     Err(Error::new(ErrorKind::Other, "Failed to detect format"))
 }
+
+pub fn from_str(s: &str) -> Option<Format> {
+    use Format::*;
+    match s {
+        "zip" => Some(Zip),
+        _ => None,
+    }
+}
