@@ -3,12 +3,14 @@ use dh::Readable;
 use std::{io::Result, path::Path};
 
 pub mod auto;
+pub mod msbt;
 pub mod umsbt;
 pub mod zip;
 
 pub enum Format {
     Zip,
     Umsbt,
+    Msbt,
 }
 
 impl Format {

@@ -1,7 +1,7 @@
 use std::{io::Result, path::Path};
 
 use crate::{formats::Format, prepare_output_dir};
-use acridotheres_3ds::umsbt;
+use acridotheres_3ds::{msbt, umsbt};
 use dh::recommended::*;
 use neozip;
 
@@ -23,6 +23,14 @@ pub fn extract_all(input: &Path, output: &Path, format: Format, buffer_size: u64
             for file in meta.files {
                 let mut writer = dh::file::open_w(output.join(&file.path))?;
                 umsbt::extract(&mut reader, &mut writer, &file, buffer_size)?;
+            }
+        }
+        Format::Msbt => {
+            // TODO: Extract attribute section
+            let meta = msbt::metadata(&mut reader)?;
+            for file in meta.files {
+                let mut writer = dh::file::open_w(output.join(&file.path))?;
+                msbt::extract(&mut reader, &mut writer, &file)?;
             }
         }
     };

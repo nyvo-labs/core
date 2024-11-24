@@ -18,7 +18,7 @@ dependencies = [
 
 [[package]]
 name = "acridotheres"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "acr",
  "acridotheres-3ds",
@@ -30,9 +30,9 @@ dependencies = [
 
 [[package]]
 name = "acridotheres-3ds"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "039b0b12eb3db6f87baab9cd9aa806086db4d20edcb51c2e8238a5c15989abb5"
+checksum = "1f37c57fcdfb79c66bb39f3904beeb511701442dfb84175fb3649e819b976aec"
 dependencies = [
  "dh",
 ]
@@ -138,9 +138,9 @@ dependencies = [
 
 [[package]]
 name = "dh"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "331be32ac5b7c7862c163f07ca1662daf117e1142f21e36f3677d0f6c1629074"
+checksum = "d4670f5a327263b647e2f638ec9ac8730e13c71625020bfabea0ec8a6eb0fbfd"
 
 [[package]]
 name = "digest"

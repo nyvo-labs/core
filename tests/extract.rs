@@ -49,3 +49,35 @@ fn umsbt_000() {
 
     std::fs::remove_dir_all(output).unwrap();
 }
+
+#[test]
+fn msbt_000() {
+    let output = Path::new("tests/output/000-msbt");
+
+    extract::extract_all(
+        Path::new("tests/samples/000.msbt"),
+        output,
+        Format::Msbt,
+        1024,
+    )
+    .unwrap();
+
+    assert!(output.join("001.txt").exists());
+    assert!(output.join("002.txt").exists());
+    assert!(output.join("003.txt").exists());
+    assert!(output.join("004.txt").exists());
+    assert!(output.join("005.txt").exists());
+    assert!(output.join("006.txt").exists());
+    assert!(output.join("007.txt").exists());
+    assert!(output.join("008.txt").exists());
+    assert!(output.join("009.txt").exists());
+    assert!(output.join("010.txt").exists());
+    assert!(output.join("011.txt").exists());
+    assert!(output.join("012.txt").exists());
+    assert!(output.join("013.txt").exists());
+    assert!(output.join("014.txt").exists());
+    assert!(output.join("015.txt").exists());
+    assert!(output.join("016.txt").exists());
+
+    std::fs::remove_dir_all(output).unwrap();
+}
