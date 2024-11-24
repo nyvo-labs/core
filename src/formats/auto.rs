@@ -25,6 +25,7 @@ pub fn from_str(s: &str) -> Option<Format> {
     match s {
         "zip" => Some(Zip),
         "umsbt" => Some(Umsbt),
+        "msbt" => Some(Msbt),
         _ => None,
     }
 }
