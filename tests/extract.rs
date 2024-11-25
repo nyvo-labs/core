@@ -11,6 +11,7 @@ fn zip_001() {
         output,
         Format::Zip,
         1024,
+        None,
     )
     .unwrap();
 
@@ -38,6 +39,7 @@ fn umsbt_000() {
         output,
         Format::Umsbt,
         1024,
+        None,
     )
     .unwrap();
 
@@ -59,6 +61,7 @@ fn msbt_000() {
         output,
         Format::Msbt,
         1024,
+        None,
     )
     .unwrap();
 
@@ -81,3 +84,5 @@ fn msbt_000() {
 
     std::fs::remove_dir_all(output).unwrap();
 }
+
+// TODO: Add tests for HSSP1-3

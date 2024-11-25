@@ -11,6 +11,9 @@ pub enum Format {
     Zip,
     Umsbt,
     Msbt,
+    Hssp1,
+    Hssp2,
+    Hssp3,
 }
 
 impl Format {

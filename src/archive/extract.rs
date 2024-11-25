@@ -5,7 +5,13 @@ use acridotheres_3ds::{msbt, umsbt};
 use dh::recommended::*;
 use neozip;
 
-pub fn extract_all(input: &Path, output: &Path, format: Format, buffer_size: u64) -> Result<()> {
+pub fn extract_all(
+    input: &Path,
+    output: &Path,
+    format: Format,
+    buffer_size: u64,
+    password: Option<&str>,
+) -> Result<()> {
     let mut reader = dh::file::open_r(input)?;
 
     prepare_output_dir(output)?;
@@ -31,6 +37,13 @@ pub fn extract_all(input: &Path, output: &Path, format: Format, buffer_size: u64
             for file in meta.files {
                 let mut writer = dh::file::open_w(output.join(&file.path))?;
                 msbt::extract(&mut reader, &mut writer, &file)?;
+            }
+        }
+        Format::Hssp1 | Format::Hssp2 | Format::Hssp3 => {
+            let meta = hssp2::metadata(&mut reader, password)?;
+            for file in meta.files {
+                let mut writer = dh::file::open_w(output.join(&file.path))?;
+                hssp2::extract(&mut reader, &file, &mut writer, buffer_size, 0)?;
             }
         }
     };

@@ -26,6 +26,9 @@ pub fn from_str(s: &str) -> Option<Format> {
         "zip" => Some(Zip),
         "umsbt" => Some(Umsbt),
         "msbt" => Some(Msbt),
+        "hssp1" => Some(Hssp1),
+        "hssp-legacy" => Some(Hssp2),
+        "hssp3" => Some(Hssp3),
         _ => None,
     }
 }

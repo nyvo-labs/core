@@ -18,21 +18,22 @@ dependencies = [
 
 [[package]]
 name = "acridotheres"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "acr",
  "acridotheres-3ds",
  "chrono",
  "crc32fast",
  "dh",
+ "hssp2",
  "neozip",
 ]
 
 [[package]]
 name = "acridotheres-3ds"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f37c57fcdfb79c66bb39f3904beeb511701442dfb84175fb3649e819b976aec"
+checksum = "000f95362077cac1e54130027caa3b0766c5605f9c2bb35c40253f0a657872cd"
 dependencies = [
  "dh",
 ]
@@ -160,6 +161,16 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "hssp2"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbabfa322897337cdeb46385b2a65b2085a9992c4b2ffa2755f05a6d8270a5da"
+dependencies = [
+ "acr",
+ "dh",
 ]
 
 [[package]]
