@@ -1,6 +1,6 @@
 [package]
 name = 'acridotheres'
-version = '0.7.0'
+version = '0.7.1'
 edition = '2021'
 description = "Acridotheres Core Library"
 license = "MIT"
@@ -9,10 +9,10 @@ repository = "https://github.com/acridotheres/core"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-acr = "0.3.2"
-chrono = "0.4.38"
+acr = "0.4.0"
+chrono = "0.4.39"
 crc32fast = "1.4.2"
 dh = "0.8.1"
-neozip = "0.3.1"
+neozip = "0.3.3"
 acridotheres-3ds = "0.2.1"
 hssp2 = "1.0.0"
