@@ -1,18 +1,14 @@
 [package]
-name = 'acridotheres'
-version = '0.7.1'
-edition = '2021'
-description = "Acridotheres Core Library"
+name = 'nyvo'
+version = '0.8.0'
+edition = '2024'
+description = "Nyvo Core"
 license = "MIT"
-repository = "https://github.com/acridotheres/core"
+repository = "https://github.com/nyvo-labs/core"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-acr = "0.4.0"
-chrono = "0.4.39"
-crc32fast = "1.4.2"
-dh = "0.8.1"
-neozip = "0.3.3"
-acridotheres-3ds = "0.2.1"
-hssp2 = "1.0.0"
+chrono = "0.4.41"
+dh = "0.9.0"
+zip = "4.3.0"
